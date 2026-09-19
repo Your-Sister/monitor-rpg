@@ -45,12 +45,16 @@ class PipBoyApp extends StatelessWidget {
             const ProgressIndicatorThemeData(color: phosphor),
       dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF0C0C0C)),
 ),
-      home: BootScreen(onDone: () {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => HomeScreen(data: data)));
-      }),
-    );
-  }
+	home: Builder(
+	  builder: (context) => BootScreen(
+	    onDone: () {
+     	Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => HomeScreen(data: data)),
+      );
+    },
+  ),
+),	
+}
 }
 
 class HomeScreen extends StatefulWidget {

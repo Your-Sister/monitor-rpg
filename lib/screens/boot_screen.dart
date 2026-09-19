@@ -52,10 +52,11 @@ class _BootScreenState extends State<BootScreen> {
       }
     });
   }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+   return GestureDetector(
+    onTap: _shown >= _lines.length ? widget.onDone : null,
+      child: Scaffold(
       backgroundColor: Colors.black,
       body: Padding(
         padding: const EdgeInsets.all(24),
