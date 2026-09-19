@@ -43,18 +43,19 @@ class PipBoyApp extends StatelessWidget {
               TextStyle(fontSize: 11, letterSpacing: 1))),
         progressIndicatorTheme:
             const ProgressIndicatorThemeData(color: phosphor),
-      dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF0C0C0C)),
-),
-	home: Builder(
-	  builder: (context) => BootScreen(
-	    onDone: () {
-     	Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => HomeScreen(data: data)),
-      );
-    },
-  ),
-),	
-}
+        dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF0C0C0C)),
+      ),
+      home: Builder(
+        builder: (context) => BootScreen(
+          onDone: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => HomeScreen(data: data)),
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
 
 class HomeScreen extends StatefulWidget {

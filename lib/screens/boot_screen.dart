@@ -52,23 +52,25 @@ class _BootScreenState extends State<BootScreen> {
       }
     });
   }
+
   @override
   Widget build(BuildContext context) {
-   return GestureDetector(
-    onTap: _shown >= _lines.length ? widget.onDone : null,
+    return GestureDetector(
+      onTap: _shown >= _lines.length ? widget.onDone : null,
       child: Scaffold(
-      backgroundColor: Colors.black,
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Align(
-          alignment: Alignment.topLeft,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (var i = 0; i < _shown && i < _lines.length; i++)
-                Text(_lines[i], style: const TextStyle(fontSize: 13, height: 1.7)),
-              const Text('█', style: TextStyle(fontSize: 13)),
-            ],
+        backgroundColor: Colors.black,
+        body: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < _shown && i < _lines.length; i++)
+                  Text(_lines[i], style: const TextStyle(fontSize: 13, height: 1.7)),
+                const Text('█', style: TextStyle(fontSize: 13)),
+              ],
+            ),
           ),
         ),
       ),
