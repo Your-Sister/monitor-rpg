@@ -1,0 +1,21 @@
+name: monitor-rpg
+description: Monitor companion app for tabletop RPG
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  google_fonts: ^6.2.1   # Share Tech Mono без скачивания файлов шрифта
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
