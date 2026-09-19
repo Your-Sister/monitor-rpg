@@ -167,9 +167,10 @@ class _StatScreenState extends State<StatScreen>
             DropdownButton<String>(
               value: attr,
               hint: const Text('—'),
-              items: const [DropdownMenuItem(value: null, child: Text('—'))]
-                  .followedBy(GameData.specialKeys.map((k) =>
-                      DropdownMenuItem(value: k, child: Text(k)))).toList(),
+              items: const [DropdownMenuItem<String>(value: null, child: Text('—'))]
+    .followedBy(GameData.specialKeys.map((k) =>
+        DropdownMenuItem<String>(value: k, child: Text(k))))
+    .toList(),
               onChanged: (v) => setD(() => attr = v),
             ),
             if (attr != null) ...[

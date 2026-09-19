@@ -92,10 +92,11 @@ class _InvScreenState extends State<InvScreen> {
             const SizedBox(width: 8),
             DropdownButton<String>(
               value: attr, hint: const Text('—'),
-              items: const [DropdownMenuItem(value: null, child: Text('—'))]
-                  .followedBy(GameData.specialKeys.map((k) => DropdownMenuItem(value: k, child: Text(k))))
-                  .toList(),
-              onChanged: (v) => setD(() => attr = v),
+              items: const [DropdownMenuItem<String>(value: null, child: Text('—'))]
+    .followedBy(GameData.specialKeys.map((k) =>
+        DropdownMenuItem<String>(value: k, child: Text(k))))
+    .toList(),
+	      onChanged: (v) => setD(() => attr = v),
             ),
             if (attr != null) ...[
               const SizedBox(width: 8),
