@@ -1,7 +1,7 @@
 name: monitor_rpg
-description: Monitor companion app for tabletop RPG
+description: Pip-Boy 2000 style companion app for tabletop RPG
 publish_to: "none"
-version: 0.1.0+1
+version: 0.2.0+2
 
 environment:
   sdk: ^3.5.0
@@ -9,7 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  google_fonts: ^6.2.1   # Share Tech Mono без скачивания файлов шрифта
+  google_fonts: ^6.2.1
+  shared_preferences: ^2.3.2
+  device_info_plus: ^10.1.0
+  battery_plus: ^6.2.0
 
 dev_dependencies:
   flutter_test:
