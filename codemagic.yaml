@@ -3,7 +3,7 @@ workflows:
     name: Android Debug APK
     scripts:
       - name: Generate android folder
-        script: flutter create --org com.vaulttec --project-name monitor-rpg .
+        script: flutter create --org com.vaulttec --project-name monitor_rpg .
       - name: Dependencies
         script: flutter pub get
       - name: Build

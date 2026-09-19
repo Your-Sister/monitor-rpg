@@ -1,4 +1,4 @@
-name: monitor-rpg
+name: monitor_rpg
 description: Monitor companion app for tabletop RPG
 publish_to: "none"
 version: 0.1.0+1
