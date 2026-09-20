@@ -2,34 +2,53 @@ String modsToString(Map<String, int> mods) => mods.entries
     .map((e) => '${e.value > 0 ? '+' : ''}${e.value} ${e.key}')
     .join('  ');
 
+class ItemCategory {
+  static const weapon = 'weapon';
+  static const armor = 'armor';
+  static const med = 'med';
+  static const tool = 'tool';
+  static const junk = 'junk';
+  static const all = [weapon, armor, med, tool, junk];
+  static const shortLabels = {
+    weapon: 'ОРУЖИЕ И БОЕП.', armor: 'БРОНЯ И ОДЕЖДА',
+    med: 'МЕД. И ЕДА', tool: 'ИНСТРУМЕНТЫ', junk: 'ХЛАМ',
+  };
+}
+
 class Skill {
   String id, name, description;
+  int points; // количество очков навыка
   Map<String, int> specialMods;
-  Skill({String? id, this.name = '', this.description = '', Map<String, int>? specialMods})
+  Skill({String? id, this.name = '', this.description = '', this.points = 1,
+      Map<String, int>? specialMods})
       : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         specialMods = specialMods ?? {};
   Map<String, dynamic> toJson() =>
-      {'id': id, 'name': name, 'description': description, 'mods': specialMods};
+      {'id': id, 'name': name, 'description': description, 'points': points, 'mods': specialMods};
   factory Skill.fromJson(Map<String, dynamic> j) => Skill(
       id: j['id'], name: j['name'], description: j['description'],
+      points: j['points'] ?? 1,
       specialMods: Map<String, int>.from(j['mods'] ?? {}));
 }
 
 class Item {
-  String id, name;
+  String id, name, category, description;
   double weight;
   int price;
   bool equipable, equipped;
   Map<String, int> specialMods;
-  Item({String? id, this.name = '', this.weight = 0, this.price = 0,
-      this.equipable = true, this.equipped = false, Map<String, int>? specialMods})
+  Item({String? id, this.name = '', this.category = ItemCategory.junk,
+      this.description = '', this.weight = 0, this.price = 0,
+      this.equipable = false, this.equipped = false, Map<String, int>? specialMods})
       : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         specialMods = specialMods ?? {};
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'weight': weight,
-      'price': price, 'equipable': equipable, 'equipped': equipped, 'mods': specialMods};
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'category': category,
+      'description': description, 'weight': weight, 'price': price,
+      'equipable': equipable, 'equipped': equipped, 'mods': specialMods};
   factory Item.fromJson(Map<String, dynamic> j) => Item(
-      id: j['id'], name: j['name'], weight: (j['weight'] ?? 0).toDouble(),
-      price: j['price'] ?? 0, equipable: j['equipable'] ?? true,
+      id: j['id'], name: j['name'], category: j['category'] ?? ItemCategory.junk,
+      description: j['description'] ?? '', weight: (j['weight'] ?? 0).toDouble(),
+      price: j['price'] ?? 0, equipable: j['equipable'] ?? false,
       equipped: j['equipped'] ?? false,
       specialMods: Map<String, int>.from(j['mods'] ?? {}));
 }
@@ -41,7 +60,8 @@ class Quest {
   Map<String, dynamic> toJson() =>
       {'id': id, 'title': title, 'description': description, 'status': status};
   factory Quest.fromJson(Map<String, dynamic> j) => Quest(
-      id: j['id'], title: j['title'], description: j['description'], status: j['status'] ?? 'active');
+      id: j['id'], title: j['title'], description: j['description'],
+      status: j['status'] ?? 'active');
 }
 
 class Character {
@@ -73,7 +93,8 @@ class GameData {
         items = items ?? [],
         quests = quests ?? [];
 
-  // ФАКТИЧЕСКИЙ S.P.E.C.I.A.L. = база + экипировка + умения/навыки
+  List<Item> itemsByCategory(String c) => items.where((i) => i.category == c).toList();
+
   Map<String, int> get effectiveSpecial {
     final m = Map<String, int>.from(character.special);
     void apply(Map<String, int> mods) =>
@@ -83,7 +104,6 @@ class GameData {
     return m;
   }
 
-  // Формулы Fallout 1/2
   int get maxHp => 65 + 2 * (effectiveSpecial['E'] ?? 5) + 10 * (character.level - 1);
   int get maxAp => 5 + 2 * (effectiveSpecial['A'] ?? 5);
 
@@ -92,8 +112,7 @@ class GameData {
     character.ap = character.ap.clamp(0, maxAp);
   }
 
-  double get carryWeight =>
-      items.fold(0.0, (sum, it) => sum + it.weight);
+  double get carryWeight => items.fold(0.0, (sum, it) => sum + it.weight);
 
   Map<String, dynamic> toJson() => {
         'character': character.toJson(),

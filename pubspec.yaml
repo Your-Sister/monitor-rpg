@@ -1,7 +1,7 @@
 name: monitor_rpg
 description: Pip-Boy 2000 style companion app for tabletop RPG
 publish_to: "none"
-version: 0.3.0+3
+version: 0.4.0+4
 
 environment:
   sdk: ^3.5.0

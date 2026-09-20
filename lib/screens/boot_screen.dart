@@ -14,11 +14,18 @@ class BootScreen extends StatefulWidget {
 class _BootScreenState extends State<BootScreen> {
   final List<String> _lines = [];
   int _shown = 0;
+  bool _done = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _boot());
+  }
+
+  void _finish() {
+    if (_done) return;
+    _done = true;
+    widget.onDone();
   }
 
   Future<void> _boot() async {
@@ -27,9 +34,14 @@ class _BootScreenState extends State<BootScreen> {
       'COPYRIGHT 2075 ROBCO(R)',
       'LOADER V1.1',
     ]);
+    setState(() {});
     try {
-      final info = await DeviceInfoPlugin().androidInfo;
-      final level = await Battery().batteryLevel;
+      final info = await DeviceInfoPlugin()
+          .androidInfo
+          .timeout(const Duration(seconds: 2));
+      final level = await Battery()
+          .batteryLevel
+          .timeout(const Duration(seconds: 2));
       final size = MediaQuery.sizeOf(context);
       _lines.addAll([
         'EXEC VERSION ${info.version.release} (SDK ${info.version.sdkInt})',
@@ -41,14 +53,15 @@ class _BootScreenState extends State<BootScreen> {
       _lines.add('DEVICE QUERY FAILED... SKIPPING');
     }
     _lines.addAll(['NO HOLOTAPE FOUND', 'LOAD ROM(1): DEITRIX 303']);
+    setState(() {});
 
     Timer.periodic(const Duration(milliseconds: 320), (t) {
-      if (!mounted) { t.cancel(); return; }
+      if (!mounted || _done) { t.cancel(); return; }
       if (_shown < _lines.length) {
         setState(() => _shown++);
       } else {
         t.cancel();
-        Timer(const Duration(milliseconds: 900), widget.onDone);
+        Timer(const Duration(milliseconds: 900), _finish);
       }
     });
   }
@@ -56,7 +69,14 @@ class _BootScreenState extends State<BootScreen> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: _shown >= _lines.length ? widget.onDone : null,
+      onTap: () {
+        if (_done) return;
+        if (_shown < _lines.length) {
+          setState(() => _shown = _lines.length); // тап: показать всё сразу
+        } else {
+          _finish(); // второй тап: перейти сразу
+        }
+      },
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Padding(

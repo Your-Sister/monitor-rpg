@@ -10,154 +10,260 @@ class InvScreen extends StatefulWidget {
   State<InvScreen> createState() => _InvScreenState();
 }
 
-class _InvScreenState extends State<InvScreen> {
+class _InvScreenState extends State<InvScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tc;
   int _sel = 0;
   GameData get d => widget.data;
 
   @override
-  Widget build(BuildContext context) {
-    final empty = d.items.isEmpty;
-    if (!empty && _sel >= d.items.length) _sel = d.items.length - 1;
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Row(children: [
-        Expanded(
-          flex: 2,
-          child: empty
-              ? const Center(child: Text('[ ИНВЕНТАРЬ ПУСТ — НАЖМИ + ]',
-                  style: TextStyle(letterSpacing: 2, fontSize: 12)))
-              : ListView.builder(
-                  itemCount: d.items.length,
-                  itemBuilder: (_, i) {
-                    final it = d.items[i];
-                    return ListTile(
-                      dense: true,
-                      selected: i == _sel,
-                      selectedTileColor: const Color(0xFF1E1E1E),
-                      leading: Icon(
-                          it.equipped ? Icons.check_box
-                          : it.equipable ? Icons.check_box_outline_blank
-                          : Icons.circle,
-                          size: 18),
-                      title: Text(it.name, style: const TextStyle(fontSize: 13)),
-                      subtitle: Text('${it.weight} кг  ${it.price} капс',
-                          style: const TextStyle(fontSize: 10)),
-                      onTap: () => setState(() => _sel = i),
-                    );
-                  },
-                ),
-        ),
-        const VerticalDivider(width: 1, color: Color(0xFF3A3A3A)),
-        Expanded(flex: 3, child: empty ? const Center(
-            child: Icon(Icons.backpack_outlined, size: 96, color: Color(0xFF3A3A3A)))
-            : _detail(d.items[_sel])),
-      ]),
-      floatingActionButton: FloatingActionButton.small(
-          onPressed: _addItem, child: const Icon(Icons.add)),
-    );
+  void initState() {
+    super.initState();
+    _tc = TabController(length: ItemCategory.all.length, vsync: this);
   }
 
-  Widget _detail(Item it) => Padding(
-    padding: const EdgeInsets.all(12),
-    child: Column(children: [
-      Icon(it.equipped ? Icons.check_box
-          : it.equipable ? Icons.check_box_outline_blank : Icons.circle,
-          size: 72, color: const Color(0xFF555555)),
-      const SizedBox(height: 6),
-      Text(it.name, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
-      const SizedBox(height: 6),
-      Text('ВЕС: ${it.weight} кг    ЦЕНА: ${it.price} капс',
-          style: const TextStyle(fontSize: 11)),
-      Text('МОДИФИКАТОРЫ: ${it.specialMods.isEmpty ? 'нет' : modsToString(it.specialMods)}',
-          style: const TextStyle(fontSize: 11)),
-      const Spacer(),
-      if (it.equipable)
-        OutlinedButton(
-          onPressed: () { setState(() => it.equipped = !it.equipped); widget.onChanged(); },
-          child: Text(it.equipped ? 'СНЯТЬ' : 'ЭКИПИРОВАТЬ',
-              style: const TextStyle(fontSize: 12)),
-        ),
-      OutlinedButton(
-        onPressed: () {
-          setState(() => d.items.remove(it));
-          widget.onChanged();
-        },
-        child: const Text('ВЫБРОСИТЬ', style: TextStyle(fontSize: 12)),
-      ),
-    ]),
-  );
+  @override
+  void dispose() { _tc.dispose(); super.dispose(); }
 
-  Future<void> _addItem() async {
-    final name = TextEditingController(),
-        weight = TextEditingController(),
-        price = TextEditingController();
-    bool equipable = true;
-    String? attr;
-    int value = 1;
-    InputDecoration dec(String l) => InputDecoration(
-        labelText: l, isDense: true, labelStyle: const TextStyle(fontSize: 11));
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setD) => AlertDialog(
-        title: const Text('НОВЫЙ ПРЕДМЕТ', style: TextStyle(fontSize: 14)),
-        content: SizedBox(
-          width: 340,
-          child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: name, decoration: dec('Название'), style: const TextStyle(fontSize: 13)),
-            TextField(controller: weight, keyboardType: TextInputType.number,
-                decoration: dec('Вес (кг)'), style: const TextStyle(fontSize: 13)),
-            TextField(controller: price, keyboardType: TextInputType.number,
-                decoration: dec('Цена (капсы)'), style: const TextStyle(fontSize: 13)),
-            Row(children: [
-              const Text('Экипируемый:', style: TextStyle(fontSize: 11)),
-              Switch(value: equipable, onChanged: (v) => setD(() => equipable = v)),
-            ]),
-            Row(children: [
-              const Text('Мод. SPECIAL:', style: TextStyle(fontSize: 11)),
-              const SizedBox(width: 8),
-              DropdownButton<String>(
-                value: attr, hint: const Text('—', style: TextStyle(fontSize: 12)),
-                items: const [DropdownMenuItem<String>(value: null, child: Text('—'))]
-                    .followedBy(GameData.specialKeys.map((k) =>
-                        DropdownMenuItem<String>(value: k, child: Text(k, style: const TextStyle(fontSize: 12)))))
-                    .toList(),
-                onChanged: (v) => setD(() => attr = v),
-              ),
-              if (attr != null) ...[
-                const SizedBox(width: 8),
-                DropdownButton<int>(
-                  value: value,
-                  items: [for (var v = -3; v <= 3; v++) v]
-                      .map((v) => DropdownMenuItem(value: v,
-                          child: Text('${v > 0 ? '+' : ''}$v', style: const TextStyle(fontSize: 12))))
-                      .toList(),
-                  onChanged: (v) => setD(() => value = v ?? 1),
-                ),
-              ],
-            ]),
-          ])),
+  List<Item> get _list => d.itemsByCategory(ItemCategory.all[_tc.index]);
+
+  void _add() {
+    setState(() {
+      d.items.add(Item(category: ItemCategory.all[_tc.index]));
+      _sel = _list.length - 1;
+    });
+    widget.onChanged();
+  }
+
+  void _delete(Item it) {
+    setState(() {
+      final i = _list.indexOf(it);
+      d.items.remove(it);
+      if (_sel >= _list.length) _sel = _list.length - 1;
+      if (_sel < 0) _sel = 0;
+      if (i >= 0 && i < _list.length) _sel = i;
+    });
+    widget.onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final list = _list;
+    if (list.isNotEmpty && _sel >= list.length) _sel = list.length - 1;
+    final item = list.isEmpty ? null : list[_sel];
+    return Column(children: [
+      SizedBox(
+        height: 30,
+        child: TabBar(
+          controller: _tc,
+          isScrollable: true,
+          labelStyle: const TextStyle(fontSize: 11, letterSpacing: 1),
+          unselectedLabelColor: const Color(0xFF555555),
+          tabs: ItemCategory.all.map((c) => Tab(text: ItemCategory.shortLabels[c])).toList(),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('ОТМЕНА', style: TextStyle(fontSize: 12))),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('ДОБАВИТЬ', style: TextStyle(fontSize: 12))),
-        ],
-      )),
+      ),
+      Expanded(
+        child: Row(children: [
+          Expanded(
+            flex: 2,
+            child: Column(children: [
+              Expanded(
+                child: list.isEmpty
+                    ? const Center(child: Text('[ ПУСТО ]',
+                        style: TextStyle(letterSpacing: 2, fontSize: 12)))
+                    : ListView.builder(
+                        itemCount: list.length,
+                        itemBuilder: (_, i) => ListTile(
+                          dense: true,
+                          selected: i == _sel,
+                          selectedTileColor: const Color(0xFF1E1E1E),
+                          title: Text(
+                            list[i].name.isEmpty ? '[ БЕЗ НАЗВАНИЯ ]' : list[i].name,
+                            style: const TextStyle(fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: list[i].equipped
+                              ? const Icon(Icons.check, size: 14) : null,
+                          onTap: () => setState(() => _sel = i),
+                        ),
+                      ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(6),
+                child: OutlinedButton.icon(
+                  onPressed: _add,
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('ДОБАВИТЬ', style: TextStyle(fontSize: 11)),
+                ),
+              ),
+            ]),
+          ),
+          const VerticalDivider(width: 1, color: Color(0xFF3A3A3A)),
+          Expanded(
+            flex: 3,
+            child: item == null
+                ? Center(child: Icon(
+                    _categoryIcon(ItemCategory.all[_tc.index]),
+                    size: 96, color: const Color(0xFF3A3A3A)))
+                : ItemEditor(
+                    key: ValueKey(item.id),
+                    item: item,
+                    onChanged: widget.onChanged,
+                    onDelete: () => _delete(item),
+                  ),
+          ),
+        ]),
+      ),
+    ]);
+  }
+
+  IconData _categoryIcon(String c) => switch (c) {
+    ItemCategory.weapon => Icons.gavel,
+    ItemCategory.armor => Icons.shield_outlined,
+    ItemCategory.med => Icons.healing,
+    ItemCategory.tool => Icons.build,
+    _ => Icons.recycling,
+  };
+}
+
+// ---------- редактор предмета: правая половина ----------
+class ItemEditor extends StatefulWidget {
+  final Item item;
+  final VoidCallback onChanged;
+  final VoidCallback onDelete;
+  const ItemEditor({super.key, required this.item, required this.onChanged, required this.onDelete});
+
+  @override
+  State<ItemEditor> createState() => _ItemEditorState();
+}
+
+class _ItemEditorState extends State<ItemEditor> {
+  late final TextEditingController _name, _weight, _price, _desc;
+  String? _attr;
+  int _value = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    final it = widget.item;
+    _name = TextEditingController(text: it.name);
+    _weight = TextEditingController(text: it.weight == 0 ? '' : '${it.weight}');
+    _price = TextEditingController(text: it.price == 0 ? '' : '${it.price}');
+    _desc = TextEditingController(text: it.description);
+    _attr = it.specialMods.isEmpty ? null : it.specialMods.keys.first;
+    _value = it.specialMods.isEmpty ? 1 : it.specialMods.values.first;
+  }
+
+  @override
+  void dispose() { _name.dispose(); _weight.dispose(); _price.dispose(); _desc.dispose(); super.dispose(); }
+
+  Item get it => widget.item;
+  InputDecoration _dec(String l) => InputDecoration(
+      labelText: l, isDense: true, labelStyle: const TextStyle(fontSize: 10));
+
+  void _saveMod() {
+    it.specialMods = _attr == null ? {} : {_attr!: _value};
+    widget.onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: Column(children: [
+        Icon(
+          it.equipped ? Icons.check_box
+          : it.equipable ? Icons.check_box_outline_blank
+          : Icons.circle,
+          size: 48, color: const Color(0xFF555555),
+        ),
+        TextField(
+          controller: _name,
+          style: const TextStyle(fontSize: 15),
+          decoration: _dec('НАЗВАНИЕ'),
+          onChanged: (v) { it.name = v; widget.onChanged(); },
+        ),
+        const SizedBox(height: 4),
+        Row(children: [
+          Expanded(child: TextField(
+            controller: _weight, keyboardType: TextInputType.number,
+            style: const TextStyle(fontSize: 12), decoration: _dec('ВЕС, кг'),
+            onChanged: (v) { it.weight = double.tryParse(v.replaceAll(',', '.')) ?? 0; widget.onChanged(); },
+          )),
+          const SizedBox(width: 8),
+          Expanded(child: TextField(
+            controller: _price, keyboardType: TextInputType.number,
+            style: const TextStyle(fontSize: 12), decoration: _dec('ЦЕНА, капс'),
+            onChanged: (v) { it.price = int.tryParse(v) ?? 0; widget.onChanged(); },
+          )),
+          const SizedBox(width: 8),
+          Column(children: [
+            const Text('ЭКИП.', style: TextStyle(fontSize: 9)),
+            Switch(
+              value: it.equipable,
+              onChanged: (v) { setState(() { it.equipable = v; if (!v) it.equipped = false; }); widget.onChanged(); },
+            ),
+          ]),
+        ]),
+        const SizedBox(height: 4),
+        Row(children: [
+          const Text('ТИП:', style: TextStyle(fontSize: 10)),
+          const SizedBox(width: 8),
+          DropdownButton<String>(
+            value: it.category,
+            items: ItemCategory.all.map((c) => DropdownMenuItem(
+                value: c,
+                child: Text(ItemCategory.shortLabels[c]!,
+                    style: const TextStyle(fontSize: 11)))).toList(),
+            onChanged: (v) { setState(() => it.category = v ?? ItemCategory.junk); widget.onChanged(); },
+          ),
+          const SizedBox(width: 12),
+          const Text('МОД.:', style: TextStyle(fontSize: 10)),
+          const SizedBox(width: 4),
+          DropdownButton<String>(
+            value: _attr, hint: const Text('—', style: TextStyle(fontSize: 11)),
+            items: const [DropdownMenuItem<String>(value: null, child: Text('—'))]
+                .followedBy(GameData.specialKeys.map((k) =>
+                    DropdownMenuItem<String>(value: k, child: Text(k, style: const TextStyle(fontSize: 11)))))
+                .toList(),
+            onChanged: (v) { setState(() => _attr = v); _saveMod(); },
+          ),
+          if (_attr != null) ...[
+            const SizedBox(width: 4),
+            DropdownButton<int>(
+              value: _value,
+              items: [for (var v = -3; v <= 3; v++) v]
+                  .map((v) => DropdownMenuItem(value: v,
+                      child: Text('${v > 0 ? '+' : ''}$v', style: const TextStyle(fontSize: 11))))
+                  .toList(),
+              onChanged: (v) { setState(() => _value = v ?? 1); _saveMod(); },
+            ),
+          ],
+        ]),
+        const SizedBox(height: 4),
+        Expanded(child: TextField(
+          controller: _desc,
+          maxLines: null, expands: true,
+          textAlignVertical: TextAlignVertical.top,
+          style: const TextStyle(fontSize: 12),
+          decoration: _dec('ОПИСАНИЕ'),
+          onChanged: (v) { it.description = v; widget.onChanged(); },
+        )),
+        const SizedBox(height: 6),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+          if (it.equipable)
+            OutlinedButton(
+              onPressed: () { setState(() => it.equipped = !it.equipped); widget.onChanged(); },
+              child: Text(it.equipped ? 'СНЯТЬ' : 'ЭКИПИРОВАТЬ',
+                  style: const TextStyle(fontSize: 11)),
+            ),
+          OutlinedButton(
+            onPressed: widget.onDelete,
+            child: const Text('ВЫБРОСИТЬ', style: TextStyle(fontSize: 11)),
+          ),
+        ]),
+      ]),
     );
-    if (ok == true && name.text.trim().isNotEmpty) {
-      setState(() {
-        d.items.add(Item(
-          name: name.text.trim(),
-          weight: double.tryParse(weight.text.replaceAll(',', '.')) ?? 0,
-          price: int.tryParse(price.text) ?? 0,
-          equipable: equipable,
-          specialMods: attr == null ? {} : {attr!: value},
-        ));
-        _sel = d.items.length - 1;
-      });
-      widget.onChanged();
-    }
   }
 }
 

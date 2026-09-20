@@ -15,6 +15,7 @@ Future<void> main() async {
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   final data = await Storage.load();
   runApp(PipBoyApp(data: data));
 }
