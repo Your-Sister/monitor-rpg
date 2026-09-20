@@ -6,6 +6,7 @@ import 'storage.dart';
 import 'screens/boot_screen.dart';
 import 'screens/stat_screen.dart';
 import 'screens/inv_screen.dart';
+import 'screens/data_screen.dart';
 import 'screens/placeholder_screen.dart';
 
 Future<void> main() async {
@@ -24,7 +25,7 @@ class PipBoyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const phosphor = Color(0xFF33FF33);
+    const phosphor = Color(0xFFB5B5B5);
     final base = ThemeData.dark(useMaterial3: true);
     return MaterialApp(
       title: 'PIP-BOY 2000',
@@ -33,17 +34,15 @@ class PipBoyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF0C0C0C),
         colorScheme: const ColorScheme.dark(
           primary: phosphor, secondary: phosphor,
-          surface: Color(0xFF111111), onSurface: phosphor),
+          surface: Color(0xFF141414), onSurface: phosphor),
         textTheme: GoogleFonts.shareTechMonoTextTheme(base.textTheme)
             .apply(bodyColor: phosphor, displayColor: phosphor),
-        navigationBarTheme: const NavigationBarThemeData(
-          backgroundColor: Color(0xFF0C0C0C),
-          indicatorColor: phosphor,
-          labelTextStyle: WidgetStatePropertyAll(
-              TextStyle(fontSize: 11, letterSpacing: 1))),
         progressIndicatorTheme:
             const ProgressIndicatorThemeData(color: phosphor),
-        dialogTheme: const DialogThemeData(backgroundColor: Color(0xFF0C0C0C)),
+        dialogTheme: const DialogThemeData(
+          backgroundColor: Color(0xFF0C0C0C),
+          insetPadding: EdgeInsets.all(16),
+        ),
       ),
       home: Builder(
         builder: (context) => BootScreen(
@@ -68,7 +67,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
-  static const _titles = ['STATUS', 'INV', 'DATA', 'MAP', 'RADIO'];
+  static const _titles = ['STAT', 'INV', 'DATA', 'MAP', 'RADIO'];
 
   void _changed() {
     widget.data.clamp();
@@ -76,30 +75,49 @@ class _HomeScreenState extends State<HomeScreen> {
     Storage.save(widget.data);
   }
 
+  Widget _topBar() => Container(
+        height: 40,
+        decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: Color(0xFF3A3A3A)))),
+        child: Row(
+          children: List.generate(_titles.length, (i) {
+            final sel = _tab == i;
+            return Expanded(
+              child: InkWell(
+                onTap: () => setState(() => _tab = i),
+                child: Center(
+                  child: Text(
+                    sel ? '[${_titles[i]}]' : _titles[i],
+                    style: TextStyle(
+                      fontSize: sel ? 18 : 15,
+                      letterSpacing: 2,
+                      color: sel
+                          ? const Color(0xFFB5B5B5)
+                          : const Color(0xFF555555),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final d = widget.data;
     final screens = [
       StatScreen(data: d, onChanged: _changed),
       InvScreen(data: d, onChanged: _changed),
-      const PlaceholderScreen('DATA MODULE', 'NO ACTIVE QUESTS'),
-      const PlaceholderScreen('MAP MODULE', 'NO SIGNAL'),
-      const PlaceholderScreen('RADIO MODULE', '0 STATIONS FOUND'),
+      DataScreen(data: d, onChanged: _changed),
+      const PlaceholderScreen('MAP MODULE', 'NO SIGNAL', Icons.map_outlined),
+      const PlaceholderScreen('RADIO MODULE', '0 STATIONS FOUND', Icons.radio_outlined),
     ];
     return Scaffold(
-      appBar: AppBar(title: Text('PIP-BOY 2000 — ${_titles[_tab]}'), centerTitle: true),
-      body: screens[_tab],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.person), label: 'STAT'),
-          NavigationDestination(icon: Icon(Icons.backpack), label: 'INV'),
-          NavigationDestination(icon: Icon(Icons.description), label: 'DATA'),
-          NavigationDestination(icon: Icon(Icons.map), label: 'MAP'),
-          NavigationDestination(icon: Icon(Icons.radio), label: 'RADIO'),
-        ],
-      ),
+      body: Column(children: [
+        _topBar(),
+        Expanded(child: screens[_tab]),
+      ]),
     );
   }
 }
