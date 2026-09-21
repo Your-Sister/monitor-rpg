@@ -14,6 +14,7 @@ class _InvScreenState extends State<InvScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tc;
   int _sel = 0;
+  Item? _draft;
   GameData get d => widget.data;
 
   @override
@@ -27,33 +28,43 @@ class _InvScreenState extends State<InvScreen>
 
   List<Item> get _list => d.itemsByCategory(ItemCategory.all[_tc.index]);
 
-  void _add() {
+  IconData _icon(String c) => switch (c) {
+    ItemCategory.weapon => Icons.gavel,
+    ItemCategory.armor => Icons.shield_outlined,
+    ItemCategory.med => Icons.healing,
+    ItemCategory.tool => Icons.build,
+    _ => Icons.recycling,
+  };
+
+  void _commit() {
+    final draft = _draft!;
+    if (draft.name.trim().isEmpty) draft.name = '[ БЕЗ НАЗВАНИЯ ]';
+    final i = d.items.indexWhere((it) => it.id == draft.id);
     setState(() {
-      d.items.add(Item(category: ItemCategory.all[_tc.index]));
-      _sel = _list.length - 1;
+      if (i >= 0) { d.items[i] = draft; } else { d.items.add(draft); }
+      _draft = null;
     });
     widget.onChanged();
   }
 
   void _delete(Item it) {
     setState(() {
-      final i = _list.indexOf(it);
       d.items.remove(it);
       if (_sel >= _list.length) _sel = _list.length - 1;
       if (_sel < 0) _sel = 0;
-      if (i >= 0 && i < _list.length) _sel = i;
     });
     widget.onChanged();
   }
 
   @override
   Widget build(BuildContext context) {
+    final draft = _draft;
     final list = _list;
     if (list.isNotEmpty && _sel >= list.length) _sel = list.length - 1;
     final item = list.isEmpty ? null : list[_sel];
     return Column(children: [
       SizedBox(
-        height: 30,
+        height: 28,
         child: TabBar(
           controller: _tc,
           isScrollable: true,
@@ -68,30 +79,29 @@ class _InvScreenState extends State<InvScreen>
             flex: 2,
             child: Column(children: [
               Expanded(
-                child: list.isEmpty
+                child: draft == null && list.isEmpty
                     ? const Center(child: Text('[ ПУСТО ]',
                         style: TextStyle(letterSpacing: 2, fontSize: 12)))
                     : ListView.builder(
                         itemCount: list.length,
                         itemBuilder: (_, i) => ListTile(
                           dense: true,
-                          selected: i == _sel,
+                          selected: i == _sel && draft == null,
                           selectedTileColor: const Color(0xFF1E1E1E),
                           title: Text(
                             list[i].name.isEmpty ? '[ БЕЗ НАЗВАНИЯ ]' : list[i].name,
                             style: const TextStyle(fontSize: 13),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                            overflow: TextOverflow.ellipsis),
                           trailing: list[i].equipped
                               ? const Icon(Icons.check, size: 14) : null,
-                          onTap: () => setState(() => _sel = i),
+                          onTap: () => setState(() { _sel = i; _draft = null; }),
                         ),
                       ),
               ),
               Padding(
                 padding: const EdgeInsets.all(6),
                 child: OutlinedButton.icon(
-                  onPressed: _add,
+                  onPressed: () => setState(() => _draft = Item(category: ItemCategory.all[_tc.index])),
                   icon: const Icon(Icons.add, size: 16),
                   label: const Text('ДОБАВИТЬ', style: TextStyle(fontSize: 11)),
                 ),
@@ -101,37 +111,61 @@ class _InvScreenState extends State<InvScreen>
           const VerticalDivider(width: 1, color: Color(0xFF3A3A3A)),
           Expanded(
             flex: 3,
-            child: item == null
-                ? Center(child: Icon(
-                    _categoryIcon(ItemCategory.all[_tc.index]),
-                    size: 96, color: const Color(0xFF3A3A3A)))
-                : ItemEditor(
-                    key: ValueKey(item.id),
-                    item: item,
-                    onChanged: widget.onChanged,
-                    onDelete: () => _delete(item),
-                  ),
+            child: draft != null
+                ? ItemEditor(
+                    key: ValueKey(draft.id),
+                    item: draft,
+                    onDone: _commit,
+                    onCancel: () => setState(() => _draft = null),
+                  )
+                : item == null
+                    ? Center(child: Icon(_icon(ItemCategory.all[_tc.index]),
+                        size: 96, color: const Color(0xFF3A3A3A)))
+                    : _itemView(item),
           ),
         ]),
       ),
     ]);
   }
 
-  IconData _categoryIcon(String c) => switch (c) {
-    ItemCategory.weapon => Icons.gavel,
-    ItemCategory.armor => Icons.shield_outlined,
-    ItemCategory.med => Icons.healing,
-    ItemCategory.tool => Icons.build,
-    _ => Icons.recycling,
-  };
+  Widget _itemView(Item it) => Padding(
+    padding: const EdgeInsets.all(12),
+    child: Column(children: [
+      Icon(it.equipped ? Icons.check_box
+          : it.equipable ? Icons.check_box_outline_blank : Icons.circle,
+          size: 64, color: const Color(0xFF555555)),
+      const SizedBox(height: 6),
+      Text(it.name, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
+      Text('ВЕС: ${it.weight}    ЦЕНА: ${it.price}',
+          style: const TextStyle(fontSize: 11)),
+      Text('МОД.: ${it.specialMods.isEmpty ? 'нет' : modsToString(it.specialMods)}',
+          style: const TextStyle(fontSize: 11)),
+      const SizedBox(height: 6),
+      Expanded(child: SingleChildScrollView(
+          child: Text(it.description.isEmpty ? '[ НЕТ ОПИСАНИЯ ]' : it.description,
+              style: const TextStyle(fontSize: 12, height: 1.5)))),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+        if (it.equipable)
+          OutlinedButton(
+            onPressed: () { setState(() => it.equipped = !it.equipped); widget.onChanged(); },
+            child: Text(it.equipped ? 'СНЯТЬ' : 'ЭКИПИРОВАТЬ', style: const TextStyle(fontSize: 11))),
+        OutlinedButton(
+          onPressed: () => setState(() => _draft = Item.fromJson(it.toJson())),
+          child: const Text('ИЗМЕНИТЬ', style: TextStyle(fontSize: 11))),
+        OutlinedButton(
+          onPressed: () => _delete(it),
+          child: const Text('ВЫБРОСИТЬ', style: TextStyle(fontSize: 11))),
+      ]),
+    ]),
+  );
 }
 
-// ---------- редактор предмета: правая половина ----------
+// ---------- редактор предмета (черновик, кнопка ГОТОВО, несколько модов) ----------
 class ItemEditor extends StatefulWidget {
   final Item item;
-  final VoidCallback onChanged;
-  final VoidCallback onDelete;
-  const ItemEditor({super.key, required this.item, required this.onChanged, required this.onDelete});
+  final VoidCallback onDone;
+  final VoidCallback onCancel;
+  const ItemEditor({super.key, required this.item, required this.onDone, required this.onCancel});
 
   @override
   State<ItemEditor> createState() => _ItemEditorState();
@@ -139,8 +173,7 @@ class ItemEditor extends StatefulWidget {
 
 class _ItemEditorState extends State<ItemEditor> {
   late final TextEditingController _name, _weight, _price, _desc;
-  String? _attr;
-  int _value = 1;
+  late List<MapEntry<String, int>> _mods;
 
   @override
   void initState() {
@@ -150,8 +183,7 @@ class _ItemEditorState extends State<ItemEditor> {
     _weight = TextEditingController(text: it.weight == 0 ? '' : '${it.weight}');
     _price = TextEditingController(text: it.price == 0 ? '' : '${it.price}');
     _desc = TextEditingController(text: it.description);
-    _attr = it.specialMods.isEmpty ? null : it.specialMods.keys.first;
-    _value = it.specialMods.isEmpty ? 1 : it.specialMods.values.first;
+    _mods = it.specialMods.entries.toList();
   }
 
   @override
@@ -161,106 +193,95 @@ class _ItemEditorState extends State<ItemEditor> {
   InputDecoration _dec(String l) => InputDecoration(
       labelText: l, isDense: true, labelStyle: const TextStyle(fontSize: 10));
 
-  void _saveMod() {
-    it.specialMods = _attr == null ? {} : {_attr!: _value};
-    widget.onChanged();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(10),
       child: Column(children: [
-        Icon(
-          it.equipped ? Icons.check_box
-          : it.equipable ? Icons.check_box_outline_blank
-          : Icons.circle,
-          size: 48, color: const Color(0xFF555555),
-        ),
         TextField(
-          controller: _name,
-          style: const TextStyle(fontSize: 15),
+          controller: _name, style: const TextStyle(fontSize: 14),
           decoration: _dec('НАЗВАНИЕ'),
-          onChanged: (v) { it.name = v; widget.onChanged(); },
+          onChanged: (v) => it.name = v,
         ),
         const SizedBox(height: 4),
         Row(children: [
           Expanded(child: TextField(
             controller: _weight, keyboardType: TextInputType.number,
-            style: const TextStyle(fontSize: 12), decoration: _dec('ВЕС, кг'),
-            onChanged: (v) { it.weight = double.tryParse(v.replaceAll(',', '.')) ?? 0; widget.onChanged(); },
+            style: const TextStyle(fontSize: 12), decoration: _dec('ВЕС'),
+            onChanged: (v) => it.weight = double.tryParse(v.replaceAll(',', '.')) ?? 0,
           )),
           const SizedBox(width: 8),
           Expanded(child: TextField(
             controller: _price, keyboardType: TextInputType.number,
-            style: const TextStyle(fontSize: 12), decoration: _dec('ЦЕНА, капс'),
-            onChanged: (v) { it.price = int.tryParse(v) ?? 0; widget.onChanged(); },
+            style: const TextStyle(fontSize: 12), decoration: _dec('ЦЕНА'),
+            onChanged: (v) => it.price = int.tryParse(v) ?? 0,
           )),
           const SizedBox(width: 8),
           Column(children: [
             const Text('ЭКИП.', style: TextStyle(fontSize: 9)),
-            Switch(
-              value: it.equipable,
-              onChanged: (v) { setState(() { it.equipable = v; if (!v) it.equipped = false; }); widget.onChanged(); },
+            Switch(value: it.equipable, onChanged: (v) =>
+                setState(() { it.equipable = v; if (!v) it.equipped = false; })),
+          ]),
+          const SizedBox(width: 8),
+          Column(children: [
+            const Text('ТИП:', style: TextStyle(fontSize: 9)),
+            DropdownButton<String>(
+              value: it.category,
+              items: ItemCategory.all.map((c) => DropdownMenuItem(
+                  value: c, child: Text(ItemCategory.shortLabels[c]!,
+                      style: const TextStyle(fontSize: 10)))).toList(),
+              onChanged: (v) => setState(() => it.category = v ?? ItemCategory.junk),
             ),
           ]),
         ]),
-        const SizedBox(height: 4),
-        Row(children: [
-          const Text('ТИП:', style: TextStyle(fontSize: 10)),
-          const SizedBox(width: 8),
-          DropdownButton<String>(
-            value: it.category,
-            items: ItemCategory.all.map((c) => DropdownMenuItem(
-                value: c,
-                child: Text(ItemCategory.shortLabels[c]!,
-                    style: const TextStyle(fontSize: 11)))).toList(),
-            onChanged: (v) { setState(() => it.category = v ?? ItemCategory.junk); widget.onChanged(); },
-          ),
-          const SizedBox(width: 12),
-          const Text('МОД.:', style: TextStyle(fontSize: 10)),
-          const SizedBox(width: 4),
-          DropdownButton<String>(
-            value: _attr, hint: const Text('—', style: TextStyle(fontSize: 11)),
-            items: const [DropdownMenuItem<String>(value: null, child: Text('—'))]
-                .followedBy(GameData.specialKeys.map((k) =>
-                    DropdownMenuItem<String>(value: k, child: Text(k, style: const TextStyle(fontSize: 11)))))
-                .toList(),
-            onChanged: (v) { setState(() => _attr = v); _saveMod(); },
-          ),
-          if (_attr != null) ...[
-            const SizedBox(width: 4),
-            DropdownButton<int>(
-              value: _value,
-              items: [for (var v = -3; v <= 3; v++) v]
-                  .map((v) => DropdownMenuItem(value: v,
-                      child: Text('${v > 0 ? '+' : ''}$v', style: const TextStyle(fontSize: 11))))
-                  .toList(),
-              onChanged: (v) { setState(() => _value = v ?? 1); _saveMod(); },
+        Align(alignment: Alignment.centerLeft,
+            child: InkWell(
+              onTap: () => setState(() => _mods.add(const MapEntry('S', 1))),
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Text('+ МОД. SPECIAL', style: TextStyle(fontSize: 10)),
+              ),
+            )),
+        for (var i = 0; i < _mods.length; i++)
+          Row(children: [
+            DropdownButton<String>(
+              value: _mods[i].key,
+              items: GameData.specialKeys.map((k) => DropdownMenuItem(
+                  value: k, child: Text(k, style: const TextStyle(fontSize: 11)))).toList(),
+              onChanged: (v) => setState(() => _mods[i] = MapEntry(v ?? 'S', _mods[i].value)),
             ),
-          ],
-        ]),
+            const SizedBox(width: 8),
+            DropdownButton<int>(
+              value: _mods[i].value,
+              items: [for (var v = -3; v <= 3; v++) v].map((v) => DropdownMenuItem(
+                  value: v, child: Text('${v > 0 ? '+' : ''}$v',
+                      style: const TextStyle(fontSize: 11)))).toList(),
+              onChanged: (v) => setState(() => _mods[i] = MapEntry(_mods[i].key, v ?? 1)),
+            ),
+            InkWell(
+              onTap: () => setState(() => _mods.removeAt(i)),
+              child: const Padding(padding: EdgeInsets.all(4), child: Icon(Icons.close, size: 14)),
+            ),
+          ]),
         const SizedBox(height: 4),
         Expanded(child: TextField(
-          controller: _desc,
-          maxLines: null, expands: true,
+          controller: _desc, maxLines: null, expands: true,
           textAlignVertical: TextAlignVertical.top,
           style: const TextStyle(fontSize: 12),
           decoration: _dec('ОПИСАНИЕ'),
-          onChanged: (v) { it.description = v; widget.onChanged(); },
+          onChanged: (v) => it.description = v,
         )),
         const SizedBox(height: 6),
         Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-          if (it.equipable)
-            OutlinedButton(
-              onPressed: () { setState(() => it.equipped = !it.equipped); widget.onChanged(); },
-              child: Text(it.equipped ? 'СНЯТЬ' : 'ЭКИПИРОВАТЬ',
-                  style: const TextStyle(fontSize: 11)),
-            ),
           OutlinedButton(
-            onPressed: widget.onDelete,
-            child: const Text('ВЫБРОСИТЬ', style: TextStyle(fontSize: 11)),
-          ),
+            onPressed: () {
+              it.specialMods = Map.fromEntries(_mods);
+              widget.onDone();
+            },
+            child: const Text('ГОТОВО', style: TextStyle(fontSize: 11))),
+          OutlinedButton(
+            onPressed: widget.onCancel,
+            child: const Text('ОТМЕНА', style: TextStyle(fontSize: 11))),
         ]),
       ]),
     );

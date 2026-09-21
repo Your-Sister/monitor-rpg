@@ -7,6 +7,7 @@ import 'screens/boot_screen.dart';
 import 'screens/stat_screen.dart';
 import 'screens/inv_screen.dart';
 import 'screens/data_screen.dart';
+import 'screens/character_creation.dart';
 import 'screens/placeholder_screen.dart';
 
 Future<void> main() async {
@@ -68,7 +69,30 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
+  bool _creationSkipped = false;
   static const _titles = ['STAT', 'INV', 'DATA', 'MAP', 'RADIO'];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeCreate());
+  }
+
+  void _maybeCreate() {
+    if (widget.data.characterConfirmed || _creationSkipped) return;
+    showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => CharacterCreation(data: widget.data),
+    ).then((v) {
+      if (!mounted) return;
+      if (v == true) {
+        _changed();
+      } else {
+        setState(() => _creationSkipped = true); // только до следующего запуска
+      }
+    });
+  }
 
   void _changed() {
     widget.data.clamp();
@@ -114,11 +138,14 @@ class _HomeScreenState extends State<HomeScreen> {
       const PlaceholderScreen('MAP MODULE', 'NO SIGNAL', Icons.map_outlined),
       const PlaceholderScreen('RADIO MODULE', '0 STATIONS FOUND', Icons.radio_outlined),
     ];
-    return Scaffold(
-      body: Column(children: [
-        _topBar(),
-        Expanded(child: screens[_tab]),
-      ]),
+    return GameDataProvider(
+      data: d,
+      child: Scaffold(
+        body: Column(children: [
+          _topBar(),
+          Expanded(child: screens[_tab]),
+        ]),
+      ),
     );
   }
 }
