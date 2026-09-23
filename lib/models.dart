@@ -1,6 +1,53 @@
+import 'dart:convert';
+
 String modsToString(Map<String, int> mods) => mods.entries
     .map((e) => '${e.value > 0 ? '+' : ''}${e.value} ${e.key}')
     .join('  ');
+
+String modsToStringF(Map<String, String> mods) =>
+    mods.entries.map((e) => '${e.key}:${e.value}').join('  ');
+
+// ==================== ВЫЧИСЛЕНИЕ ФОРМУЛ ====================
+// Переменные: S P E C I A L (база+вещи+черты), rank (ранги перка), level
+int evalFormula(String src, Map<String, int> vars) {
+  final s = src.replaceAll(' ', '').toUpperCase();
+  var i = 0;
+  num expr() {
+    num v = term();
+    while (i < s.length && (s[i] == '+' || s[i] == '-')) {
+      final op = s[i++];
+      final r = term();
+      v = op == '+' ? v + r : v - r;
+    }
+    return v;
+  }
+  num term() {
+    num v = factor();
+    while (i < s.length && (s[i] == '*' || s[i] == '/')) {
+      final op = s[i++];
+      final r = factor();
+      v = op == '*' ? v * r : (r == 0 ? 0 : v / r);
+    }
+    return v;
+  }
+  num factor() {
+    if (i < s.length && s[i] == '-') { i++; return -factor(); }
+    if (i < s.length && s[i] == '(') {
+      i++;
+      final v = expr();
+      if (i < s.length && s[i] == ')') i++;
+      return v;
+    }
+    final n0 = i;
+    while (i < s.length && RegExp(r'[0-9.]').hasMatch(s[i])) i++;
+    if (i > n0) return num.tryParse(s.substring(n0, i)) ?? 0;
+    final a0 = i;
+    while (i < s.length && RegExp(r'[A-Z]').hasMatch(s[i])) i++;
+    if (i > a0) return vars[s.substring(a0, i)] ?? 0;
+    return 0;
+  }
+  try { return expr().round(); } catch (_) { return 0; }
+}
 
 class ItemCategory {
   static const weapon = 'weapon';
@@ -75,10 +122,10 @@ const traitDefs = [
 // ==================== МОДЕЛИ ====================
 class Skill {
   String id, name, description;
-  int points; // ранги перка
-  Map<String, int> specialMods;
+  int points; // ранги
+  Map<String, String> specialMods; // attr -> формула
   Skill({String? id, this.name = '', this.description = '', this.points = 1,
-      Map<String, int>? specialMods})
+      Map<String, String>? specialMods})
       : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         specialMods = specialMods ?? {};
   Map<String, dynamic> toJson() =>
@@ -86,28 +133,29 @@ class Skill {
   factory Skill.fromJson(Map<String, dynamic> j) => Skill(
       id: j['id'], name: j['name'], description: j['description'],
       points: j['points'] ?? 1,
-      specialMods: Map<String, int>.from(j['mods'] ?? {}));
+      specialMods: Map<String, dynamic>.from(j['mods'] ?? {})
+          .map((k, v) => MapEntry(k, '$v'))); // старые int-моды -> строки
 }
 
 class Item {
   String id, name, category, description;
   double weight;
-  int price;
+  int price, count;
   bool equipable, equipped;
   Map<String, int> specialMods;
   Item({String? id, this.name = '', this.category = ItemCategory.junk,
-      this.description = '', this.weight = 0, this.price = 0,
+      this.description = '', this.weight = 0, this.price = 0, this.count = 1,
       this.equipable = false, this.equipped = false, Map<String, int>? specialMods})
       : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         specialMods = specialMods ?? {};
   Map<String, dynamic> toJson() => {'id': id, 'name': name, 'category': category,
-      'description': description, 'weight': weight, 'price': price,
+      'description': description, 'weight': weight, 'price': price, 'count': count,
       'equipable': equipable, 'equipped': equipped, 'mods': specialMods};
   factory Item.fromJson(Map<String, dynamic> j) => Item(
       id: j['id'], name: j['name'], category: j['category'] ?? ItemCategory.junk,
       description: j['description'] ?? '', weight: (j['weight'] ?? 0).toDouble(),
-      price: j['price'] ?? 0, equipable: j['equipable'] ?? false,
-      equipped: j['equipped'] ?? false,
+      price: j['price'] ?? 0, count: j['count'] ?? 1,
+      equipable: j['equipable'] ?? false, equipped: j['equipped'] ?? false,
       specialMods: Map<String, int>.from(j['mods'] ?? {}));
 }
 
@@ -143,9 +191,9 @@ class GameData {
   List<Skill> skills;
   List<Item> items;
   List<Quest> quests;
-  Map<String, int> skillSpent;   // id навыка -> вложенные %
-  List<String> skillTags;        // отмеченные навыки (max 3)
-  List<String> traits;           // выбранные черты (max 2)
+  Map<String, int> skillSpent;
+  List<String> skillTags;
+  List<String> traits;
   bool characterConfirmed;
   static const specialKeys = ['S', 'P', 'E', 'C', 'I', 'A', 'L'];
 
@@ -164,22 +212,28 @@ class GameData {
 
   List<Item> itemsByCategory(String c) => items.where((i) => i.category == c).toList();
 
-  // ФАКТ. SPECIAL = база + экипировка + перки + черты
   Map<String, int> get effectiveSpecial {
     final m = Map<String, int>.from(character.special);
     void apply(Map<String, int> mods) =>
         mods.forEach((k, v) => m[k] = (m[k] ?? 5) + v);
     for (final it in items) { if (it.equipped) apply(it.specialMods); }
-    for (final s in skills) { apply(s.specialMods); }
     if (hasTrait('gifted')) { for (final k in specialKeys) m[k] = (m[k] ?? 5) + 1; }
     if (hasTrait('smallFrame')) m['A'] = (m['A'] ?? 5) + 1;
     if (hasTrait('bruiser')) m['S'] = (m['S'] ?? 5) + 2;
+    // свои навыки (перки): формулы от базы+вещей+черт, rank, level
+    for (final s in skills) {
+      final ctx = Map<String, int>.from(m)
+        ..['RANK'] = s.points
+        ..['LEVEL'] = character.level;
+      s.specialMods.forEach((k, f) {
+        m[k] = (m[k] ?? 5) + evalFormula(f, ctx);
+      });
+    }
     return m;
   }
 
   int _sp(String k) => effectiveSpecial[k] ?? 5;
 
-  // ---- производные (формулы Fallout 2) ----
   int get maxHp => 15 + _sp('S') + 2 * _sp('E') + (character.level - 1) * (2 + _sp('E') ~/ 2);
   int get maxAp => (5 + _sp('A') ~/ 2 + (hasTrait('bruiser') ? -2 : 0)).clamp(1, 10);
   int get armorClass => hasTrait('kamikaze') ? 0 : _sp('A');
@@ -191,14 +245,13 @@ class GameData {
   int get poisonResist => hasTrait('fastMetabolism') ? 0 : _sp('E') * 5;
   int get radResist => hasTrait('fastMetabolism') ? 0 : _sp('E') * 2;
   int get skillRate => 5 + 2 * _sp('I') + (hasTrait('skilled') ? 5 : 0) + (hasTrait('gifted') ? -5 : 0);
-  double get loadNow => items.fold(0.0, (sum, it) => sum + it.weight);
+  double get loadNow => items.fold(0.0, (sum, it) => sum + it.weight * it.count);
 
   void clamp() {
     character.hp = character.hp.clamp(0, maxHp);
     character.ap = character.ap.clamp(0, maxAp);
   }
 
-  // ---- навыки ----
   int traitSkillMod(String id) {
     var m = 0;
     if (hasTrait('gifted')) m -= 10;
@@ -223,6 +276,17 @@ class GameData {
     return skillTags.contains(id) ? (c / 2).ceil() : c;
   }
 
+  void replaceWith(GameData o) {
+    character = o.character;
+    skills = o.skills;
+    items = o.items;
+    quests = o.quests;
+    skillSpent = o.skillSpent;
+    skillTags = o.skillTags;
+    traits = o.traits;
+    characterConfirmed = o.characterConfirmed;
+  }
+
   Map<String, dynamic> toJson() => {
         'character': character.toJson(),
         'skills': skills.map((e) => e.toJson()).toList(),
@@ -233,6 +297,8 @@ class GameData {
         'traits': traits,
         'confirmed': characterConfirmed,
       };
+
+  String exportJson() => const JsonEncoder.withIndent('  ').convert(toJson());
 
   factory GameData.fromJson(Map<String, dynamic> j) => GameData(
       character: Character.fromJson(Map<String, dynamic>.from(j['character'] ?? {})),

@@ -20,7 +20,12 @@ class _InvScreenState extends State<InvScreen>
   @override
   void initState() {
     super.initState();
-    _tc = TabController(length: ItemCategory.all.length, vsync: this);
+    _tc = TabController(length: ItemCategory.all.length, vsync: this)
+      ..addListener(() { // БАГФИКС: перестроение при смене категории
+        if (!_tc.indexIsChanging) {
+          setState(() { _sel = 0; _draft = null; });
+        }
+      });
   }
 
   @override
@@ -43,6 +48,8 @@ class _InvScreenState extends State<InvScreen>
     setState(() {
       if (i >= 0) { d.items[i] = draft; } else { d.items.add(draft); }
       _draft = null;
+      _sel = d.itemsByCategory(draft.category).indexWhere((e) => e.id == draft.id);
+      if (_sel < 0) _sel = 0;
     });
     widget.onChanged();
   }
@@ -92,8 +99,15 @@ class _InvScreenState extends State<InvScreen>
                             list[i].name.isEmpty ? '[ БЕЗ НАЗВАНИЯ ]' : list[i].name,
                             style: const TextStyle(fontSize: 13),
                             overflow: TextOverflow.ellipsis),
-                          trailing: list[i].equipped
-                              ? const Icon(Icons.check, size: 14) : null,
+                          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                            if (list[i].count > 1)
+                              Text('x${list[i].count}', style: const TextStyle(fontSize: 11)),
+                            if (list[i].equipped)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 4),
+                                child: Icon(Icons.check, size: 14),
+                              ),
+                          ]),
                           onTap: () => setState(() { _sel = i; _draft = null; }),
                         ),
                       ),
@@ -101,7 +115,8 @@ class _InvScreenState extends State<InvScreen>
               Padding(
                 padding: const EdgeInsets.all(6),
                 child: OutlinedButton.icon(
-                  onPressed: () => setState(() => _draft = Item(category: ItemCategory.all[_tc.index])),
+                  onPressed: () => setState(() =>
+                      _draft = Item(category: ItemCategory.all[_tc.index])),
                   icon: const Icon(Icons.add, size: 16),
                   label: const Text('ДОБАВИТЬ', style: TextStyle(fontSize: 11)),
                 ),
@@ -136,7 +151,7 @@ class _InvScreenState extends State<InvScreen>
           size: 64, color: const Color(0xFF555555)),
       const SizedBox(height: 6),
       Text(it.name, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
-      Text('ВЕС: ${it.weight}    ЦЕНА: ${it.price}',
+      Text('КОЛ-ВО: ${it.count}    ВЕС: ${it.weight}    ЦЕНА: ${it.price}',
           style: const TextStyle(fontSize: 11)),
       Text('МОД.: ${it.specialMods.isEmpty ? 'нет' : modsToString(it.specialMods)}',
           style: const TextStyle(fontSize: 11)),
@@ -160,7 +175,7 @@ class _InvScreenState extends State<InvScreen>
   );
 }
 
-// ---------- редактор предмета (черновик, кнопка ГОТОВО, несколько модов) ----------
+// ---------- редактор предмета ----------
 class ItemEditor extends StatefulWidget {
   final Item item;
   final VoidCallback onDone;
@@ -173,7 +188,6 @@ class ItemEditor extends StatefulWidget {
 
 class _ItemEditorState extends State<ItemEditor> {
   late final TextEditingController _name, _weight, _price, _desc;
-  late List<MapEntry<String, int>> _mods;
 
   @override
   void initState() {
@@ -183,7 +197,6 @@ class _ItemEditorState extends State<ItemEditor> {
     _weight = TextEditingController(text: it.weight == 0 ? '' : '${it.weight}');
     _price = TextEditingController(text: it.price == 0 ? '' : '${it.price}');
     _desc = TextEditingController(text: it.description);
-    _mods = it.specialMods.entries.toList();
   }
 
   @override
@@ -205,15 +218,26 @@ class _ItemEditorState extends State<ItemEditor> {
         ),
         const SizedBox(height: 4),
         Row(children: [
+          Column(children: [
+            const Text('КОЛ-ВО:', style: TextStyle(fontSize: 9)),
+            Row(children: [
+              InkWell(onTap: () => setState(() => it.count = (it.count - 1).clamp(1, 999)),
+                  child: const Padding(padding: EdgeInsets.all(3), child: Icon(Icons.remove, size: 13))),
+              Text('${it.count}', style: const TextStyle(fontSize: 13)),
+              InkWell(onTap: () => setState(() => it.count = (it.count + 1).clamp(1, 999)),
+                  child: const Padding(padding: EdgeInsets.all(3), child: Icon(Icons.add, size: 13))),
+            ]),
+          ]),
+          const SizedBox(width: 8),
           Expanded(child: TextField(
             controller: _weight, keyboardType: TextInputType.number,
-            style: const TextStyle(fontSize: 12), decoration: _dec('ВЕС'),
+            style: const TextStyle(fontSize: 12), decoration: _dec('ВЕС 1 ШТ.'),
             onChanged: (v) => it.weight = double.tryParse(v.replaceAll(',', '.')) ?? 0,
           )),
           const SizedBox(width: 8),
           Expanded(child: TextField(
             controller: _price, keyboardType: TextInputType.number,
-            style: const TextStyle(fontSize: 12), decoration: _dec('ЦЕНА'),
+            style: const TextStyle(fontSize: 12), decoration: _dec('ЦЕНА 1 ШТ.'),
             onChanged: (v) => it.price = int.tryParse(v) ?? 0,
           )),
           const SizedBox(width: 8),
@@ -234,32 +258,36 @@ class _ItemEditorState extends State<ItemEditor> {
             ),
           ]),
         ]),
+        const SizedBox(height: 4),
         Align(alignment: Alignment.centerLeft,
             child: InkWell(
-              onTap: () => setState(() => _mods.add(const MapEntry('S', 1))),
+              onTap: () => setState(() => it.specialMods['S'] = 1),
               child: const Padding(
                 padding: EdgeInsets.all(4),
                 child: Text('+ МОД. SPECIAL', style: TextStyle(fontSize: 10)),
               ),
             )),
-        for (var i = 0; i < _mods.length; i++)
+        for (final e in it.specialMods.entries.toList())
           Row(children: [
             DropdownButton<String>(
-              value: _mods[i].key,
+              value: e.key,
               items: GameData.specialKeys.map((k) => DropdownMenuItem(
                   value: k, child: Text(k, style: const TextStyle(fontSize: 11)))).toList(),
-              onChanged: (v) => setState(() => _mods[i] = MapEntry(v ?? 'S', _mods[i].value)),
+              onChanged: (v) => setState(() {
+                final val = it.specialMods.remove(e.key) ?? 0;
+                it.specialMods[v ?? 'S'] = val;
+              }),
             ),
             const SizedBox(width: 8),
             DropdownButton<int>(
-              value: _mods[i].value,
+              value: e.value,
               items: [for (var v = -3; v <= 3; v++) v].map((v) => DropdownMenuItem(
                   value: v, child: Text('${v > 0 ? '+' : ''}$v',
                       style: const TextStyle(fontSize: 11)))).toList(),
-              onChanged: (v) => setState(() => _mods[i] = MapEntry(_mods[i].key, v ?? 1)),
+              onChanged: (v) => setState(() => it.specialMods[e.key] = v ?? 1),
             ),
             InkWell(
-              onTap: () => setState(() => _mods.removeAt(i)),
+              onTap: () => setState(() => it.specialMods.remove(e.key)),
               child: const Padding(padding: EdgeInsets.all(4), child: Icon(Icons.close, size: 14)),
             ),
           ]),
@@ -274,10 +302,7 @@ class _ItemEditorState extends State<ItemEditor> {
         const SizedBox(height: 6),
         Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
           OutlinedButton(
-            onPressed: () {
-              it.specialMods = Map.fromEntries(_mods);
-              widget.onDone();
-            },
+            onPressed: widget.onDone,
             child: const Text('ГОТОВО', style: TextStyle(fontSize: 11))),
           OutlinedButton(
             onPressed: widget.onCancel,

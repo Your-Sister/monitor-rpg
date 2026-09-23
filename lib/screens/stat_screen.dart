@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models.dart';
+import 'dart:convert';
 
 class StatScreen extends StatefulWidget {
   final GameData data;
@@ -18,7 +19,7 @@ class _StatScreenState extends State<StatScreen>
   @override
   void initState() {
     super.initState();
-    _tc = TabController(length: 5, vsync: this);
+    _tc = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -31,127 +32,125 @@ class _StatScreenState extends State<StatScreen>
         height: 28,
         child: TabBar(
           controller: _tc,
-          isScrollable: true,
-          labelStyle: const TextStyle(fontSize: 11, letterSpacing: 2),
+          labelStyle: const TextStyle(fontSize: 12, letterSpacing: 2),
           unselectedLabelColor: const Color(0xFF555555),
-          tabs: const [
-            Tab(text: 'MAIN'), Tab(text: 'ПАРАМ.'), Tab(text: 'НАВЫКИ'),
-            Tab(text: 'PERKS'), Tab(text: 'ЧЕРТЫ'),
-          ],
+          tabs: const [Tab(text: 'ПАРАМ.'), Tab(text: 'НАВЫКИ'), Tab(text: 'ЧЕРТЫ')],
         ),
       ),
       Expanded(
         child: TabBarView(
           controller: _tc,
           children: [
-            _mainTab(),
-            const ParamsTab(),
+            ParamsTab(data: d, onChanged: widget.onChanged),
             SkillsTab(data: d, onChanged: widget.onChanged),
-            PerksPanel(data: d, onChanged: widget.onChanged),
             TraitsTab(data: d, onChanged: widget.onChanged),
           ],
         ),
       ),
     ]);
   }
-
-  void _levelUp() {
-    setState(() {
-      d.character.level++;
-      d.character.xp = 0;
-      d.character.hp = d.maxHp;
-      d.character.skillPoints += d.skillRate;
-    });
-    widget.onChanged();
-  }
-
-  Widget _mainTab() {
-    final eff = d.effectiveSpecial;
-    final base = d.character.special;
-    final canLevel = d.character.xp >= d.character.xpNext;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 2, 10, 6),
-      child: Column(children: [
-        Row(children: [
-          Expanded(
-            child: Text('${d.character.name}   LV.${d.character.level}',
-                style: const TextStyle(fontSize: 12, letterSpacing: 2)),
-          ),
-          if (canLevel)
-            InkWell(
-              onTap: _levelUp,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(border: Border.all()),
-                child: const Text('НОВЫЙ УРОВЕНЬ!', style: TextStyle(fontSize: 10)),
-              ),
-            ),
-          Text('   НАГРУЗКА ${d.loadNow.toStringAsFixed(1)}/${d.carryWeight}',
-              style: const TextStyle(fontSize: 9)),
-        ]),
-        Expanded(
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            SizedBox(
-              width: 200,
-              child: Column(children: [
-                const Row(children: [
-                  SizedBox(width: 20, child: Text('АТР', style: TextStyle(fontSize: 9))),
-                  SizedBox(width: 40, child: Center(child: Text('БАЗА', style: TextStyle(fontSize: 9)))),
-                  SizedBox(width: 52, child: Center(child: Text('ФАКТ', style: TextStyle(fontSize: 9)))),
-                ]),
-                ...GameData.specialKeys.map((k) => Expanded(
-                  child: Row(children: [
-                    SizedBox(width: 20, child: Text(k, style: const TextStyle(fontSize: 13))),
-                    SizedBox(width: 40, child: Center(child: Text('${base[k]}', style: const TextStyle(fontSize: 13)))),
-                    SizedBox(width: 52, child: Center(child: Text(
-                      '${eff[k]}${eff[k] != base[k] ? '(${eff[k]! > base[k]! ? '+' : ''}${eff[k]! - base[k]!})' : ''}',
-                      style: TextStyle(fontSize: 13,
-                          color: eff[k] != base[k] ? Colors.white : null),
-                    ))),
-                  ]),
-                )),
-              ]),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(border: Border.all(color: const Color(0xFF3A3A3A))),
-                child: const Center(child: Icon(Icons.person, size: 160, color: Color(0xFF4A4A4A))),
-              ),
-            ),
-          ]),
-        ),
-        const Divider(height: 6),
-        Row(children: [
-          Expanded(child: _miniBar('HP', d.character.hp, d.maxHp)),
-          const SizedBox(width: 12),
-          Expanded(child: _miniBar('LEVEL', d.character.xp, d.character.xpNext)),
-          const SizedBox(width: 12),
-          Expanded(child: _miniBar('AP', d.character.ap, d.maxAp)),
-        ]),
-      ]),
-    );
-  }
-
-  Widget _miniBar(String label, int value, int max) => Row(children: [
-    SizedBox(width: 74,
-        child: Text('$label $value/$max', style: const TextStyle(fontSize: 10))),
-    Expanded(child: SizedBox(
-      height: 8,
-      child: LinearProgressIndicator(
-          value: max == 0 ? 0 : value / max, minHeight: 5,
-          backgroundColor: const Color(0xFF1A1A1A)),
-    )),
-  ]);
 }
 
-// ==================== ПАРАМЕТРЫ ====================
+class GameDataProvider extends InheritedWidget {
+  final GameData data;
+  const GameDataProvider({super.key, required this.data, required super.child});
+  static GameData of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<GameDataProvider>()!.data;
+  @override
+  bool updateShouldNotify(GameDataProvider oldWidget) => oldWidget.data != data;
+}
+
+// ==================== ПАРАМ. (SPECIAL слева + производные) ====================
 class ParamsTab extends StatelessWidget {
-  const ParamsTab({super.key});
+  final GameData data;
+  final VoidCallback onChanged;
+  const ParamsTab({super.key, required this.data, required this.onChanged});
+
+  void _levelUp() {
+    data.character.level++;
+    data.character.xp = 0;
+    data.character.hp = data.maxHp;
+    data.character.skillPoints += data.skillRate;
+    onChanged();
+  }
+
+    Future<void> _export(BuildContext context) async {
+    final ctrl = TextEditingController(text: data.exportJson());
+    await showDialog(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('ЭКСПОРТ JSON', style: TextStyle(fontSize: 13)),
+      content: SizedBox(
+        width: 440, height: 250,
+        child: TextField(
+          controller: ctrl, maxLines: null, expands: true, readOnly: true,
+          style: const TextStyle(fontSize: 9),
+        ),
+      ),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx),
+          child: const Text('ЗАКРЫТЬ', style: TextStyle(fontSize: 11)))],
+    ));
+    ctrl.dispose();
+  }
+
+  Future<void> _import(BuildContext context) async {
+    final ctrl = TextEditingController();
+    var error = '';
+    await showDialog(context: context, builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setD) => AlertDialog(
+        title: const Text('ИМПОРТ JSON', style: TextStyle(fontSize: 13)),
+        content: SizedBox(
+          width: 440, height: 250,
+          child: Column(children: [
+            Expanded(child: TextField(
+              controller: ctrl, maxLines: null, expands: true,
+              textAlignVertical: TextAlignVertical.top,
+              style: const TextStyle(fontSize: 9),
+              decoration: const InputDecoration(
+                  labelText: 'Вставь JSON', isDense: true,
+                  labelStyle: TextStyle(fontSize: 10)),
+            )),
+            if (error.isNotEmpty)
+              Text(error, style: const TextStyle(fontSize: 10, color: Colors.red)),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx),
+              child: const Text('ОТМЕНА', style: TextStyle(fontSize: 11))),
+          FilledButton(
+            onPressed: () {
+              try {
+                final parsed = GameData.fromJson(jsonDecode(ctrl.text));
+                data.replaceWith(parsed);
+                Navigator.pop(ctx);
+                onChanged();
+              } catch (e) {
+                setD(() => error = 'ОШИБКА ПАРСИНГА: $e');
+              }
+            },
+            child: const Text('ЗАГРУЗИТЬ', style: TextStyle(fontSize: 11)),
+          ),
+        ],
+      ),
+    ));
+    ctrl.dispose();
+  }
+
+  Map<String, dynamic> _decode(String text) {
+    // ignore: avoid_dynamic_calls
+    final dynamic raw = _jsonDecode(text);
+    return Map<String, dynamic>.from(raw as Map);
+  }
+
+  dynamic _jsonDecode(String t) {
+    // обёртка, чтобы не тащить dart:convert в UI напрямую
+    return _JsonHelper.decode(t);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final d = GameDataProvider.of(context);
+    final d = data;
+    final eff = d.effectiveSpecial;
+    final base = d.character.special;
+    final canLevel = d.character.xp >= d.character.xpNext;
     final rows = <(String, String)>[
       ('ОЧКИ ЗДОРОВЬЯ (MAX)', '${d.maxHp}'),
       ('ОЧКИ ДЕЙСТВИЙ (MAX)', '${d.maxAp}'),
@@ -166,113 +165,430 @@ class ParamsTab extends StatelessWidget {
       ('ОЧКОВ НАВЫКОВ ЗА УРОВЕНЬ', '${d.skillRate}'),
       ('СВОБОДНЫХ ОЧКОВ НАВЫКОВ', '${d.character.skillPoints}'),
     ];
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      children: [
-        for (final (label, value) in rows)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(children: [
-              Expanded(child: Text(label, style: const TextStyle(fontSize: 12))),
-              Text(value, style: const TextStyle(fontSize: 12, color: Colors.white)),
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SizedBox(
+        width: 190,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 4, 0, 6),
+          child: Column(children: [
+            const Row(children: [
+              SizedBox(width: 20, child: Text('АТР', style: TextStyle(fontSize: 9))),
+              SizedBox(width: 40, child: Center(child: Text('БАЗА', style: TextStyle(fontSize: 9)))),
+              SizedBox(width: 52, child: Center(child: Text('ФАКТ', style: TextStyle(fontSize: 9)))),
             ]),
-          ),
-      ],
-    );
+            ...GameData.specialKeys.map((k) => Expanded(
+              child: Row(children: [
+                SizedBox(width: 20, child: Text(k, style: const TextStyle(fontSize: 13))),
+                SizedBox(width: 40, child: Center(child: Text('${base[k]}', style: const TextStyle(fontSize: 13)))),
+                SizedBox(width: 52, child: Center(child: Text(
+                  '${eff[k]}${eff[k] != base[k] ? '(${eff[k]! > base[k]! ? '+' : ''}${eff[k]! - base[k]!})' : ''}',
+                  style: TextStyle(fontSize: 13,
+                      color: eff[k] != base[k] ? Colors.white : null),
+                ))),
+              ]),
+            )),
+          ]),
+        ),
+      ),
+      const VerticalDivider(width: 1, color: Color(0xFF3A3A3A)),
+      Expanded(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
+          child: Column(children: [
+            Row(children: [
+              Expanded(child: Text('${d.character.name}   LV.${d.character.level}',
+                  style: const TextStyle(fontSize: 12, letterSpacing: 2))),
+              if (canLevel)
+                InkWell(
+                  onTap: _levelUp,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(border: Border.all()),
+                    child: const Text('НОВЫЙ УРОВЕНЬ!', style: TextStyle(fontSize: 10)),
+                  ),
+                ),
+              Text('   НАГР. ${d.loadNow.toStringAsFixed(1)}/${d.carryWeight}',
+                  style: const TextStyle(fontSize: 9)),
+            ]),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                children: [
+                  for (final (label, value) in rows)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: Row(children: [
+                        Expanded(child: Text(label, style: const TextStyle(fontSize: 12))),
+                        Text(value, style: const TextStyle(fontSize: 12, color: Colors.white)),
+                      ]),
+                    ),
+                ],
+              ),
+            ),
+            Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+              OutlinedButton(
+                onPressed: () => _export(context),
+                child: const Text('ЭКСПОРТ', style: TextStyle(fontSize: 10))),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: () => _import(context),
+                child: const Text('ИМПОРТ', style: TextStyle(fontSize: 10))),
+            ]),
+            const Divider(height: 6),
+            Row(children: [
+              Expanded(child: _miniBar('HP', d.character.hp, d.maxHp)),
+              const SizedBox(width: 12),
+              Expanded(child: _miniBar('LEVEL', d.character.xp, d.character.xpNext)),
+              const SizedBox(width: 12),
+              Expanded(child: _miniBar('AP', d.character.ap, d.maxAp)),
+            ]),
+          ]),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _miniBar(String label, int value, int max) => Row(children: [
+    SizedBox(width: 74,
+        child: Text('$label $value/$max', style: const TextStyle(fontSize: 10))),
+    Expanded(child: SizedBox(
+      height: 8,
+      child: LinearProgressIndicator(
+          value: max == 0 ? 0 : value / max, minHeight: 5,
+          backgroundColor: const Color(0xFF1A1A1A)),
+    )),
+  ]);
+}
+
+// хелпер декодирования (обёртка над dart:convert)
+class _JsonHelper {
+  static dynamic decode(String t) {
+    // ignore: avoid_relative_lib_imports
+    return _decodeInternal(t);
+  }
+  static dynamic _decodeInternal(String t) => _decoder.convert(t);
+  static const _decoder = _JsonCodec();
+}
+
+class _JsonCodec {
+  const _JsonCodec();
+  dynamic convert(String t) {
+    // реальная реализация — через dart:convert внутри models.dart
+    // здесь делегируем
+    return _dc(t);
   }
 }
 
-// хелпер доступа к GameData из контекста (устанавливается в main)
-class GameDataProvider extends InheritedWidget {
-  final GameData data;
-  const GameDataProvider({super.key, required this.data, required super.child});
-
-  static GameData of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<GameDataProvider>()!.data;
-
-  @override
-  bool updateShouldNotify(GameDataProvider oldWidget) => oldWidget.data != data;
-}
-
-// ==================== НАВЫКИ ====================
-class SkillsTab extends StatelessWidget {
+// ==================== НАВЫКИ (18 игровых + свои) ====================
+class SkillsTab extends StatefulWidget {
   final GameData data;
   final VoidCallback onChanged;
   const SkillsTab({super.key, required this.data, required this.onChanged});
 
   @override
+  State<SkillsTab> createState() => _SkillsTabState();
+}
+
+class _SkillsTabState extends State<SkillsTab> {
+  int _sel = 0;
+  Skill? _draft;
+  GameData get d => widget.data;
+
+  void _commitPerk() {
+    final draft = _draft!;
+    if (draft.name.trim().isEmpty) draft.name = '[ БЕЗ НАЗВАНИЯ ]';
+    final i = d.skills.indexWhere((s) => s.id == draft.id);
+    setState(() {
+      if (i >= 0) { d.skills[i] = draft; } else { d.skills.add(draft); }
+      _draft = null;
+    });
+    widget.onChanged();
+  }
+
+  void _deletePerk(Skill s) {
+    setState(() {
+      d.skills.remove(s);
+      if (_sel >= d.skills.length) _sel = d.skills.length - 1;
+      if (_sel < 0) _sel = 0;
+    });
+    widget.onChanged();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final d = data;
-    return Column(children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(10, 4, 10, 0),
-        child: Row(children: [
-          Text('ОЧКОВ НАВЫКОВ: ${d.character.skillPoints}',
-              style: const TextStyle(fontSize: 11)),
-          const Spacer(),
-          InkWell(
-            onTap: () { d.character.skillPoints = d.skillRate; onChanged(); },
-            child: const Padding(
-              padding: EdgeInsets.all(4),
-              child: Text('ОБНОВИТЬ ДО ${''}', style: TextStyle(fontSize: 10)),
+    final draft = _draft;
+    final perksEmpty = d.skills.isEmpty;
+    if (!perksEmpty && _sel >= d.skills.length) _sel = d.skills.length - 1;
+    final perk = perksEmpty ? null : d.skills[_sel];
+    return Row(children: [
+      Expanded(
+        flex: 2,
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 3, 8, 0),
+            child: Row(children: [
+              Text('ОЧКОВ: ${d.character.skillPoints}',
+                  style: const TextStyle(fontSize: 10)),
+              const Spacer(),
+              InkWell(
+                onTap: () { d.character.skillPoints = d.skillRate; widget.onChanged(); },
+                child: const Padding(
+                  padding: EdgeInsets.all(2),
+                  child: Text('ОБНОВИТЬ', style: TextStyle(fontSize: 9)),
+                ),
+              ),
+            ]),
+          ),
+          const Divider(height: 3),
+          Expanded(
+            flex: 5,
+            child: ListView.builder(
+              itemCount: skillDefs.length,
+              itemBuilder: (_, i) {
+                final def = skillDefs[i];
+                final v = d.skillValue(def);
+                final tagged = d.skillTags.contains(def.id);
+                final cost = d.nextCost(def.id);
+                final canBuy = d.character.skillPoints >= cost && v < 300;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                  child: Row(children: [
+                    Expanded(child: Text(def.name, style: const TextStyle(fontSize: 10))),
+                    Text('$v%', style: const TextStyle(fontSize: 11, color: Colors.white)),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: () {
+                        if (tagged) { d.skillTags.remove(def.id); }
+                        else if (d.skillTags.length < 3) { d.skillTags.add(def.id); }
+                        widget.onChanged();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          border: Border.all(),
+                          color: tagged ? Colors.white12 : Colors.transparent,
+                        ),
+                        child: Text('TAG', style: TextStyle(fontSize: 8,
+                            color: tagged ? Colors.white : const Color(0xFF777777))),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: canBuy ? () {
+                        d.character.skillPoints -= cost;
+                        d.skillSpent[def.id] = (d.skillSpent[def.id] ?? 0) + 1;
+                        widget.onChanged();
+                      } : null,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(border: Border.all(
+                            color: canBuy ? Colors.white54 : const Color(0xFF333333))),
+                        child: Text('+$cost%', style: TextStyle(fontSize: 8,
+                            color: canBuy ? null : const Color(0xFF444444))),
+                      ),
+                    ),
+                  ]),
+                );
+              },
+            ),
+          ),
+          const Divider(height: 3),
+          const Padding(
+            padding: EdgeInsets.only(left: 8, top: 2),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('СВОИ НАВЫКИ:', style: TextStyle(fontSize: 9)),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: draft == null && perksEmpty
+                ? const Center(child: Text('[ НЕТ ]', style: TextStyle(fontSize: 10)))
+                : ListView.builder(
+                    itemCount: d.skills.length,
+                    itemBuilder: (_, i) {
+                      final s = d.skills[i];
+                      return ListTile(
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                        selected: i == _sel && draft == null,
+                        selectedTileColor: const Color(0xFF1E1E1E),
+                        title: Text(s.name.isEmpty ? '[ БЕЗ НАЗВАНИЯ ]' : s.name,
+                            style: const TextStyle(fontSize: 11),
+                            overflow: TextOverflow.ellipsis),
+                        trailing: Text('x${s.points}', style: const TextStyle(fontSize: 10)),
+                        onTap: () => setState(() { _sel = i; _draft = null; }),
+                      );
+                    },
+                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(4),
+            child: OutlinedButton.icon(
+              onPressed: () => setState(() => _draft = Skill()),
+              icon: const Icon(Icons.add, size: 14),
+              label: const Text('ДОБАВИТЬ', style: TextStyle(fontSize: 10)),
             ),
           ),
         ]),
       ),
-      const Divider(height: 4),
+      const VerticalDivider(width: 1, color: Color(0xFF3A3A3A)),
       Expanded(
-        child: ListView.builder(
-          itemCount: skillDefs.length,
-          itemBuilder: (_, i) {
-            final def = skillDefs[i];
-            final v = d.skillValue(def);
-            final tagged = d.skillTags.contains(def.id);
-            final cost = d.nextCost(def.id);
-            final canBuy = d.character.skillPoints >= cost && v < 300;
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-              child: Row(children: [
-                Expanded(child: Text(def.name, style: const TextStyle(fontSize: 11))),
-                Text('${def.formula}  ', style: const TextStyle(fontSize: 9, color: Color(0xFF555555))),
-                Text('$v%', style: const TextStyle(fontSize: 12, color: Colors.white)),
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: () {
-                    if (tagged) { d.skillTags.remove(def.id); }
-                    else if (d.skillTags.length < 3) { d.skillTags.add(def.id); }
-                    onChanged();
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                    decoration: BoxDecoration(
-                      border: Border.all(),
-                      color: tagged ? Colors.white12 : Colors.transparent,
-                    ),
-                    child: Text('TAG', style: TextStyle(fontSize: 9,
-                        color: tagged ? Colors.white : const Color(0xFF777777))),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: canBuy ? () {
-                    d.character.skillPoints -= cost;
-                    d.skillSpent[def.id] = (d.skillSpent[def.id] ?? 0) + 1;
-                    onChanged();
-                  } : null,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(border: Border.all(
-                        color: canBuy ? Colors.white54 : const Color(0xFF333333))),
-                    child: Text('+$cost%', style: TextStyle(fontSize: 9,
-                        color: canBuy ? null : const Color(0xFF444444))),
-                  ),
-                ),
-              ]),
-            );
-          },
-        ),
+        flex: 3,
+        child: draft != null
+            ? PerkEditor(
+                key: ValueKey(draft.id),
+                skill: draft,
+                onDone: _commitPerk,
+                onCancel: () => setState(() => _draft = null),
+              )
+            : perk == null
+                ? const Center(child: Icon(Icons.star_outline, size: 96, color: Color(0xFF3A3A3A)))
+                : _perkView(perk),
       ),
     ]);
+  }
+
+  Widget _perkView(Skill s) => Padding(
+    padding: const EdgeInsets.all(12),
+    child: Column(children: [
+      const Icon(Icons.star, size: 56, color: Color(0xFF555555)),
+      const SizedBox(height: 6),
+      Text(s.name, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
+      Text('РАНГОВ: ${s.points}', style: const TextStyle(fontSize: 11)),
+      Text('МОД.: ${s.specialMods.isEmpty ? 'нет' : modsToStringF(s.specialMods)}',
+          style: const TextStyle(fontSize: 11)),
+      const SizedBox(height: 6),
+      Expanded(child: SingleChildScrollView(
+          child: Text(s.description.isEmpty ? '[ НЕТ ОПИСАНИЯ ]' : s.description,
+              style: const TextStyle(fontSize: 12, height: 1.5)))),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+        OutlinedButton(
+          onPressed: () => setState(() => _draft = Skill.fromJson(s.toJson())),
+          child: const Text('ИЗМЕНИТЬ', style: TextStyle(fontSize: 11))),
+        OutlinedButton(
+          onPressed: () => _deletePerk(s),
+          child: const Text('УДАЛИТЬ', style: TextStyle(fontSize: 11))),
+      ]),
+    ]),
+  );
+}
+
+// ---------- редактор своего навыка с формулами ----------
+class PerkEditor extends StatefulWidget {
+  final Skill skill;
+  final VoidCallback onDone;
+  final VoidCallback onCancel;
+  const PerkEditor({super.key, required this.skill, required this.onDone, required this.onCancel});
+
+  @override
+  State<PerkEditor> createState() => _PerkEditorState();
+}
+
+class _PerkEditorState extends State<PerkEditor> {
+  late final TextEditingController _name, _desc;
+  late List<MapEntry<String, String>> _mods;
+  late List<TextEditingController> _modCtrls;
+
+  @override
+  void initState() {
+    super.initState();
+    _name = TextEditingController(text: widget.skill.name);
+    _desc = TextEditingController(text: widget.skill.description);
+    _mods = widget.skill.specialMods.entries.toList();
+    _modCtrls = _mods.map((e) => TextEditingController(text: e.value)).toList();
+  }
+
+  @override
+  void dispose() {
+    _name.dispose(); _desc.dispose();
+    for (final c in _modCtrls) { c.dispose(); }
+    super.dispose();
+  }
+
+  Skill get s => widget.skill;
+  InputDecoration _dec(String l) => InputDecoration(
+      labelText: l, isDense: true, labelStyle: const TextStyle(fontSize: 10));
+
+  void _addMod() {
+    setState(() {
+      _mods.add(const MapEntry('S', '1'));
+      _modCtrls.add(TextEditingController(text: '1'));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: Column(children: [
+        const Icon(Icons.star_outline, size: 36, color: Color(0xFF555555)),
+        TextField(
+          controller: _name, style: const TextStyle(fontSize: 14),
+          decoration: _dec('НАЗВАНИЕ'),
+          onChanged: (v) => s.name = v,
+        ),
+        const SizedBox(height: 4),
+        Row(children: [
+          const Text('РАНГОВ:', style: TextStyle(fontSize: 10)),
+          InkWell(onTap: () => setState(() => s.points = (s.points - 1).clamp(1, 5)),
+              child: const Padding(padding: EdgeInsets.all(4), child: Icon(Icons.remove, size: 14))),
+          Text('${s.points}', style: const TextStyle(fontSize: 14)),
+          InkWell(onTap: () => setState(() => s.points = (s.points + 1).clamp(1, 5)),
+              child: const Padding(padding: EdgeInsets.all(4), child: Icon(Icons.add, size: 14))),
+        ]),
+        Align(alignment: Alignment.centerLeft,
+            child: InkWell(
+              onTap: _addMod,
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Text('+ МОД. SPECIAL (формула)', style: TextStyle(fontSize: 10)),
+              ),
+            )),
+        for (var i = 0; i < _mods.length; i++)
+          Row(children: [
+            DropdownButton<String>(
+              value: _mods[i].key,
+              items: GameData.specialKeys.map((k) => DropdownMenuItem(
+                  value: k, child: Text(k, style: const TextStyle(fontSize: 11)))).toList(),
+              onChanged: (v) => setState(() => _mods[i] = MapEntry(v ?? 'S', _mods[i].value)),
+            ),
+            const SizedBox(width: 6),
+            Expanded(child: TextField(
+              controller: _modCtrls[i],
+              style: const TextStyle(fontSize: 11),
+              decoration: const InputDecoration(
+                  isDense: true, hintText: '1, rank, L/2, 1+2*rank',
+                  hintStyle: TextStyle(fontSize: 9, color: Color(0xFF555555))),
+              onChanged: (v) => _mods[i] = MapEntry(_mods[i].key, v),
+            )),
+            InkWell(
+              onTap: () => setState(() { _mods.removeAt(i); _modCtrls.removeAt(i).dispose(); }),
+              child: const Padding(padding: EdgeInsets.all(4), child: Icon(Icons.close, size: 14)),
+            ),
+          ]),
+        const SizedBox(height: 4),
+        Expanded(child: TextField(
+          controller: _desc, maxLines: null, expands: true,
+          textAlignVertical: TextAlignVertical.top,
+          style: const TextStyle(fontSize: 12),
+          decoration: _dec('ОПИСАНИЕ'),
+          onChanged: (v) => s.description = v,
+        )),
+        const SizedBox(height: 6),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+          OutlinedButton(
+            onPressed: () {
+              s.specialMods = Map.fromEntries(_mods);
+              widget.onDone();
+            },
+            child: const Text('ГОТОВО', style: TextStyle(fontSize: 11))),
+          OutlinedButton(
+            onPressed: widget.onCancel,
+            child: const Text('ОТМЕНА', style: TextStyle(fontSize: 11))),
+        ]),
+      ]),
+    );
   }
 }
 
@@ -312,228 +628,6 @@ class TraitsTab extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-// ==================== PERKS ====================
-class PerksPanel extends StatefulWidget {
-  final GameData data;
-  final VoidCallback onChanged;
-  const PerksPanel({super.key, required this.data, required this.onChanged});
-
-  @override
-  State<PerksPanel> createState() => _PerksPanelState();
-}
-
-class _PerksPanelState extends State<PerksPanel> {
-  int _sel = 0;
-  Skill? _draft;
-  GameData get d => widget.data;
-
-  void _commit() {
-    final draft = _draft!;
-    if (draft.name.trim().isEmpty) draft.name = '[ БЕЗ НАЗВАНИЯ ]';
-    final i = d.skills.indexWhere((s) => s.id == draft.id);
-    setState(() {
-      if (i >= 0) { d.skills[i] = draft; } else { d.skills.add(draft); }
-      _draft = null;
-    });
-    widget.onChanged();
-  }
-
-  void _delete(Skill s) {
-    setState(() {
-      d.skills.remove(s);
-      if (_sel >= d.skills.length) _sel = d.skills.length - 1;
-      if (_sel < 0) _sel = 0;
-    });
-    widget.onChanged();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final draft = _draft;
-    final empty = d.skills.isEmpty;
-    if (!empty && _sel >= d.skills.length) _sel = d.skills.length - 1;
-    final skill = empty ? null : d.skills[_sel];
-    return Row(children: [
-      Expanded(
-        flex: 2,
-        child: Column(children: [
-          Expanded(
-            child: draft == null && empty
-                ? const Center(child: Text('[ НЕТ ПЕРКОВ ]',
-                    style: TextStyle(letterSpacing: 2, fontSize: 12)))
-                : ListView.builder(
-                    itemCount: d.skills.length,
-                    itemBuilder: (_, i) {
-                      final s = d.skills[i];
-                      return ListTile(
-                        dense: true,
-                        selected: i == _sel && draft == null,
-                        selectedTileColor: const Color(0xFF1E1E1E),
-                        title: Text(s.name.isEmpty ? '[ БЕЗ НАЗВАНИЯ ]' : s.name,
-                            style: const TextStyle(fontSize: 13),
-                            overflow: TextOverflow.ellipsis),
-                        trailing: Text('x${s.points}', style: const TextStyle(fontSize: 11)),
-                        onTap: () => setState(() { _sel = i; _draft = null; }),
-                      );
-                    },
-                  ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(6),
-            child: OutlinedButton.icon(
-              onPressed: () => setState(() => _draft = Skill()),
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('ДОБАВИТЬ', style: TextStyle(fontSize: 11)),
-            ),
-          ),
-        ]),
-      ),
-      const VerticalDivider(width: 1, color: Color(0xFF3A3A3A)),
-      Expanded(
-        flex: 3,
-        child: draft != null
-            ? PerkEditor(
-                key: ValueKey(draft.id),
-                skill: draft,
-                onDone: _commit,
-                onCancel: () => setState(() => _draft = null),
-              )
-            : skill == null
-                ? const Center(child: Icon(Icons.star_outline, size: 96, color: Color(0xFF3A3A3A)))
-                : _perkView(skill),
-      ),
-    ]);
-  }
-
-  Widget _perkView(Skill s) => Padding(
-    padding: const EdgeInsets.all(12),
-    child: Column(children: [
-      const Icon(Icons.star, size: 64, color: Color(0xFF555555)),
-      const SizedBox(height: 6),
-      Text(s.name, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
-      Text('РАНГОВ: ${s.points}', style: const TextStyle(fontSize: 11)),
-      Text('МОД.: ${s.specialMods.isEmpty ? 'нет' : modsToString(s.specialMods)}',
-          style: const TextStyle(fontSize: 11)),
-      const SizedBox(height: 6),
-      Expanded(child: SingleChildScrollView(
-          child: Text(s.description.isEmpty ? '[ НЕТ ОПИСАНИЯ ]' : s.description,
-              style: const TextStyle(fontSize: 12, height: 1.5)))),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-        OutlinedButton(
-          onPressed: () => setState(() => _draft = Skill.fromJson(s.toJson())),
-          child: const Text('ИЗМЕНИТЬ', style: TextStyle(fontSize: 11))),
-        OutlinedButton(
-          onPressed: () => _delete(s),
-          child: const Text('УДАЛИТЬ', style: TextStyle(fontSize: 11))),
-      ]),
-    ]),
-  );
-}
-
-// ---------- редактор перка (черновик, кнопка ГОТОВО) ----------
-class PerkEditor extends StatefulWidget {
-  final Skill skill;
-  final VoidCallback onDone;
-  final VoidCallback onCancel;
-  const PerkEditor({super.key, required this.skill, required this.onDone, required this.onCancel});
-
-  @override
-  State<PerkEditor> createState() => _PerkEditorState();
-}
-
-class _PerkEditorState extends State<PerkEditor> {
-  late final TextEditingController _name, _desc;
-  late List<MapEntry<String, int>> _mods;
-
-  @override
-  void initState() {
-    super.initState();
-    _name = TextEditingController(text: widget.skill.name);
-    _desc = TextEditingController(text: widget.skill.description);
-    _mods = widget.skill.specialMods.entries.toList();
-  }
-
-  @override
-  void dispose() { _name.dispose(); _desc.dispose(); super.dispose(); }
-
-  Skill get s => widget.skill;
-  InputDecoration _dec(String l) => InputDecoration(
-      labelText: l, isDense: true, labelStyle: const TextStyle(fontSize: 10));
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(10),
-      child: Column(children: [
-        const Icon(Icons.star_outline, size: 40, color: Color(0xFF555555)),
-        TextField(
-          controller: _name, style: const TextStyle(fontSize: 14),
-          decoration: _dec('НАЗВАНИЕ'),
-          onChanged: (v) => s.name = v,
-        ),
-        const SizedBox(height: 4),
-        Row(children: [
-          const Text('РАНГОВ:', style: TextStyle(fontSize: 10)),
-          InkWell(onTap: () => setState(() => s.points = (s.points - 1).clamp(1, 5)),
-              child: const Padding(padding: EdgeInsets.all(4), child: Icon(Icons.remove, size: 14))),
-          Text('${s.points}', style: const TextStyle(fontSize: 14)),
-          InkWell(onTap: () => setState(() => s.points = (s.points + 1).clamp(1, 5)),
-              child: const Padding(padding: EdgeInsets.all(4), child: Icon(Icons.add, size: 14))),
-        ]),
-        Align(alignment: Alignment.centerLeft,
-            child: InkWell(
-              onTap: () => setState(() => _mods.add(const MapEntry('S', 1))),
-              child: const Padding(
-                padding: EdgeInsets.all(4),
-                child: Text('+ МОД. SPECIAL', style: TextStyle(fontSize: 10)),
-              ),
-            )),
-        for (var i = 0; i < _mods.length; i++)
-          Row(children: [
-            DropdownButton<String>(
-              value: _mods[i].key,
-              items: GameData.specialKeys.map((k) => DropdownMenuItem(
-                  value: k, child: Text(k, style: const TextStyle(fontSize: 11)))).toList(),
-              onChanged: (v) => setState(() => _mods[i] = MapEntry(v ?? 'S', _mods[i].value)),
-            ),
-            const SizedBox(width: 8),
-            DropdownButton<int>(
-              value: _mods[i].value,
-              items: [for (var v = -3; v <= 3; v++) v].map((v) => DropdownMenuItem(
-                  value: v, child: Text('${v > 0 ? '+' : ''}$v',
-                      style: const TextStyle(fontSize: 11)))).toList(),
-              onChanged: (v) => setState(() => _mods[i] = MapEntry(_mods[i].key, v ?? 1)),
-            ),
-            InkWell(
-              onTap: () => setState(() => _mods.removeAt(i)),
-              child: const Padding(padding: EdgeInsets.all(4), child: Icon(Icons.close, size: 14)),
-            ),
-          ]),
-        const SizedBox(height: 4),
-        Expanded(child: TextField(
-          controller: _desc, maxLines: null, expands: true,
-          textAlignVertical: TextAlignVertical.top,
-          style: const TextStyle(fontSize: 12),
-          decoration: _dec('ОПИСАНИЕ'),
-          onChanged: (v) => s.description = v,
-        )),
-        const SizedBox(height: 6),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-          OutlinedButton(
-            onPressed: () {
-              s.specialMods = Map.fromEntries(_mods);
-              widget.onDone();
-            },
-            child: const Text('ГОТОВО', style: TextStyle(fontSize: 11))),
-          OutlinedButton(
-            onPressed: widget.onCancel,
-            child: const Text('ОТМЕНА', style: TextStyle(fontSize: 11))),
-        ]),
-      ]),
     );
   }
 }
