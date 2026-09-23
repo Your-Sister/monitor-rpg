@@ -1,6 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models.dart';
-import 'dart:convert';
 
 class StatScreen extends StatefulWidget {
   final GameData data;
@@ -631,4 +631,5 @@ class TraitsTab extends StatelessWidget {
     );
   }
 }
+
 
