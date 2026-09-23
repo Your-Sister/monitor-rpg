@@ -134,17 +134,6 @@ class ParamsTab extends StatelessWidget {
     ctrl.dispose();
   }
 
-  Map<String, dynamic> _decode(String text) {
-    // ignore: avoid_dynamic_calls
-    final dynamic raw = _jsonDecode(text);
-    return Map<String, dynamic>.from(raw as Map);
-  }
-
-  dynamic _jsonDecode(String t) {
-    // обёртка, чтобы не тащить dart:convert в UI напрямую
-    return _JsonHelper.decode(t);
-  }
-
   @override
   Widget build(BuildContext context) {
     final d = data;
@@ -258,25 +247,6 @@ class ParamsTab extends StatelessWidget {
           backgroundColor: const Color(0xFF1A1A1A)),
     )),
   ]);
-}
-
-// хелпер декодирования (обёртка над dart:convert)
-class _JsonHelper {
-  static dynamic decode(String t) {
-    // ignore: avoid_relative_lib_imports
-    return _decodeInternal(t);
-  }
-  static dynamic _decodeInternal(String t) => _decoder.convert(t);
-  static const _decoder = _JsonCodec();
-}
-
-class _JsonCodec {
-  const _JsonCodec();
-  dynamic convert(String t) {
-    // реальная реализация — через dart:convert внутри models.dart
-    // здесь делегируем
-    return _dc(t);
-  }
 }
 
 // ==================== НАВЫКИ (18 игровых + свои) ====================
@@ -631,5 +601,4 @@ class TraitsTab extends StatelessWidget {
     );
   }
 }
-
 

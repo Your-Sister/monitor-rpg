@@ -12,7 +12,12 @@ String modsToStringF(Map<String, String> mods) =>
 int evalFormula(String src, Map<String, int> vars) {
   final s = src.replaceAll(' ', '').toUpperCase();
   var i = 0;
-  num expr() {
+
+  late num Function() expr;
+  late num Function() term;
+  late num Function() factor;
+
+  expr = () {
     num v = term();
     while (i < s.length && (s[i] == '+' || s[i] == '-')) {
       final op = s[i++];
@@ -20,8 +25,9 @@ int evalFormula(String src, Map<String, int> vars) {
       v = op == '+' ? v + r : v - r;
     }
     return v;
-  }
-  num term() {
+  };
+
+  term = () {
     num v = factor();
     while (i < s.length && (s[i] == '*' || s[i] == '/')) {
       final op = s[i++];
@@ -29,9 +35,13 @@ int evalFormula(String src, Map<String, int> vars) {
       v = op == '*' ? v * r : (r == 0 ? 0 : v / r);
     }
     return v;
-  }
-  num factor() {
-    if (i < s.length && s[i] == '-') { i++; return -factor(); }
+  };
+
+  factor = () {
+    if (i < s.length && s[i] == '-') {
+      i++;
+      return -factor();
+    }
     if (i < s.length && s[i] == '(') {
       i++;
       final v = expr();
@@ -45,8 +55,13 @@ int evalFormula(String src, Map<String, int> vars) {
     while (i < s.length && RegExp(r'[A-Z]').hasMatch(s[i])) i++;
     if (i > a0) return vars[s.substring(a0, i)] ?? 0;
     return 0;
+  };
+
+  try {
+    return expr().round();
+  } catch (_) {
+    return 0;
   }
-  try { return expr().round(); } catch (_) { return 0; }
 }
 
 class ItemCategory {
