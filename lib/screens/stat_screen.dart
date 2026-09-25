@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models.dart';
 
@@ -11,8 +10,7 @@ class StatScreen extends StatefulWidget {
   State<StatScreen> createState() => _StatScreenState();
 }
 
-class _StatScreenState extends State<StatScreen>
-    with SingleTickerProviderStateMixin {
+class _StatScreenState extends State<StatScreen> with SingleTickerProviderStateMixin {
   late final TabController _tc;
   GameData get d => widget.data;
 
@@ -29,11 +27,12 @@ class _StatScreenState extends State<StatScreen>
   Widget build(BuildContext context) {
     return Column(children: [
       SizedBox(
-        height: 28,
+        height: 32,
         child: TabBar(
           controller: _tc,
-          labelStyle: const TextStyle(fontSize: 12, letterSpacing: 2),
+          labelStyle: const TextStyle(fontSize: 13, letterSpacing: 2, fontWeight: FontWeight.bold),
           unselectedLabelColor: const Color(0xFF555555),
+          indicatorColor: const Color(0xFFB5B5B5),
           tabs: const [Tab(text: 'ПАРАМ.'), Tab(text: 'НАВЫКИ'), Tab(text: 'ЧЕРТЫ')],
         ),
       ),
@@ -74,7 +73,7 @@ class ParamsTab extends StatelessWidget {
     onChanged();
   }
 
-    Future<void> _export(BuildContext context) async {
+  Future<void> _export(BuildContext context) async {
     final ctrl = TextEditingController(text: data.exportJson());
     await showDialog(context: context, builder: (ctx) => AlertDialog(
       title: const Text('ЭКСПОРТ JSON', style: TextStyle(fontSize: 13)),
@@ -161,16 +160,16 @@ class ParamsTab extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(10, 4, 0, 6),
           child: Column(children: [
             const Row(children: [
-              SizedBox(width: 20, child: Text('АТР', style: TextStyle(fontSize: 9))),
+              SizedBox(width: 36, child: Text('АТР', style: TextStyle(fontSize: 9))),
               SizedBox(width: 40, child: Center(child: Text('БАЗА', style: TextStyle(fontSize: 9)))),
-              SizedBox(width: 52, child: Center(child: Text('ФАКТ', style: TextStyle(fontSize: 9)))),
+              SizedBox(width: 60, child: Center(child: Text('ФАКТ', style: TextStyle(fontSize: 9)))),
             ]),
             ...GameData.specialKeys.map((k) => Expanded(
               child: Row(children: [
-                SizedBox(width: 20, child: Text(k, style: const TextStyle(fontSize: 13))),
+                SizedBox(width: 36, child: Text(specialRu[k] ?? k, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold))),
                 SizedBox(width: 40, child: Center(child: Text('${base[k]}', style: const TextStyle(fontSize: 13)))),
-                SizedBox(width: 52, child: Center(child: Text(
-                  '${eff[k]}${eff[k] != base[k] ? '(${eff[k]! > base[k]! ? '+' : ''}${eff[k]! - base[k]!})' : ''}',
+                SizedBox(width: 60, child: Center(child: Text(
+                  '${eff[k]}${eff[k] != base[k] ? ' (${eff[k]! > base[k]! ? '+' : ''}${eff[k]! - base[k]!})' : ''}',
                   style: TextStyle(fontSize: 13,
                       color: eff[k] != base[k] ? Colors.white : null),
                 ))),
@@ -207,8 +206,8 @@ class ParamsTab extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 3),
                       child: Row(children: [
-                        Expanded(child: Text(label, style: const TextStyle(fontSize: 12))),
-                        Text(value, style: const TextStyle(fontSize: 12, color: Colors.white)),
+                        Expanded(child: Text(label, style: const TextStyle(fontSize: 11))),
+                        Text(value, style: const TextStyle(fontSize: 11, color: Colors.white)),
                       ]),
                     ),
                 ],
@@ -249,7 +248,7 @@ class ParamsTab extends StatelessWidget {
   ]);
 }
 
-// ==================== НАВЫКИ (18 игровых + свои) ====================
+// ==================== НАВЫКИ ====================
 class SkillsTab extends StatefulWidget {
   final GameData data;
   final VoidCallback onChanged;
@@ -290,21 +289,27 @@ class _SkillsTabState extends State<SkillsTab> {
     final perksEmpty = d.skills.isEmpty;
     if (!perksEmpty && _sel >= d.skills.length) _sel = d.skills.length - 1;
     final perk = perksEmpty ? null : d.skills[_sel];
+    
     return Row(children: [
+      // ЛЕВАЯ ЧАСТЬ: СПИСОК
       Expanded(
         flex: 2,
         child: Column(children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 3, 8, 0),
             child: Row(children: [
-              Text('ОЧКОВ: ${d.character.skillPoints}',
-                  style: const TextStyle(fontSize: 10)),
+              Text('ОЧКОВ: ${d.character.skillPoints}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
               const Spacer(),
               InkWell(
-                onTap: () { d.character.skillPoints = d.skillRate; widget.onChanged(); },
+                // ИСПРАВЛЕНИЕ БАГА: очищаем потраченные очки перед сбросом
+                onTap: () { 
+                  d.skillSpent.clear(); 
+                  d.character.skillPoints = d.skillRate; 
+                  widget.onChanged(); 
+                },
                 child: const Padding(
-                  padding: EdgeInsets.all(2),
-                  child: Text('ОБНОВИТЬ', style: TextStyle(fontSize: 9)),
+                  padding: EdgeInsets.all(4),
+                  child: Text('СБРОС', style: TextStyle(fontSize: 9, color: Colors.redAccent)),
                 ),
               ),
             ]),
@@ -320,44 +325,50 @@ class _SkillsTabState extends State<SkillsTab> {
                 final tagged = d.skillTags.contains(def.id);
                 final cost = d.nextCost(def.id);
                 final canBuy = d.character.skillPoints >= cost && v < 300;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-                  child: Row(children: [
-                    Expanded(child: Text(def.name, style: const TextStyle(fontSize: 10))),
-                    Text('$v%', style: const TextStyle(fontSize: 11, color: Colors.white)),
-                    const SizedBox(width: 6),
-                    InkWell(
-                      onTap: () {
-                        if (tagged) { d.skillTags.remove(def.id); }
-                        else if (d.skillTags.length < 3) { d.skillTags.add(def.id); }
-                        widget.onChanged();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          border: Border.all(),
-                          color: tagged ? Colors.white12 : Colors.transparent,
+                final isSelected = _sel == i && draft == null;
+
+                return InkWell(
+                  onTap: () => setState(() { _sel = i; _draft = null; }),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    color: isSelected ? const Color(0xFF1E1E1E) : Colors.transparent,
+                    child: Row(children: [
+                      Expanded(child: Text(def.name, style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal))),
+                      Text('$v%', style: const TextStyle(fontSize: 11, color: Colors.white)),
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: () {
+                          if (tagged) { d.skillTags.remove(def.id); }
+                          else if (d.skillTags.length < 3) { d.skillTags.add(def.id); }
+                          widget.onChanged();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            border: Border.all(),
+                            color: tagged ? Colors.white12 : Colors.transparent,
+                          ),
+                          child: Text('TAG', style: TextStyle(fontSize: 8,
+                              color: tagged ? Colors.white : const Color(0xFF777777))),
                         ),
-                        child: Text('TAG', style: TextStyle(fontSize: 8,
-                            color: tagged ? Colors.white : const Color(0xFF777777))),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    InkWell(
-                      onTap: canBuy ? () {
-                        d.character.skillPoints -= cost;
-                        d.skillSpent[def.id] = (d.skillSpent[def.id] ?? 0) + 1;
-                        widget.onChanged();
-                      } : null,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(border: Border.all(
-                            color: canBuy ? Colors.white54 : const Color(0xFF333333))),
-                        child: Text('+$cost%', style: TextStyle(fontSize: 8,
-                            color: canBuy ? null : const Color(0xFF444444))),
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: canBuy ? () {
+                          d.character.skillPoints -= cost;
+                          d.skillSpent[def.id] = (d.skillSpent[def.id] ?? 0) + 1;
+                          widget.onChanged();
+                        } : null,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(border: Border.all(
+                              color: canBuy ? Colors.white54 : const Color(0xFF333333))),
+                          child: Text('+$cost%', style: TextStyle(fontSize: 8,
+                              color: canBuy ? null : const Color(0xFF444444))),
+                        ),
                       ),
-                    ),
-                  ]),
+                    ]),
+                  ),
                 );
               },
             ),
@@ -403,6 +414,7 @@ class _SkillsTabState extends State<SkillsTab> {
         ]),
       ),
       const VerticalDivider(width: 1, color: Color(0xFF3A3A3A)),
+      // ПРАВАЯ ЧАСТЬ: ОПИСАНИЕ (СТАТИЧНАЯ, С ПРОКРУТКОЙ)
       Expanded(
         flex: 3,
         child: draft != null
@@ -421,17 +433,24 @@ class _SkillsTabState extends State<SkillsTab> {
 
   Widget _perkView(Skill s) => Padding(
     padding: const EdgeInsets.all(12),
-    child: Column(children: [
-      const Icon(Icons.star, size: 56, color: Color(0xFF555555)),
-      const SizedBox(height: 6),
-      Text(s.name, style: const TextStyle(fontSize: 16), textAlign: TextAlign.center),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Icon(Icons.star, size: 48, color: Color(0xFF555555)),
+      const SizedBox(height: 8),
+      Text(s.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 4),
       Text('РАНГОВ: ${s.points}', style: const TextStyle(fontSize: 11)),
       Text('МОД.: ${s.specialMods.isEmpty ? 'нет' : modsToStringF(s.specialMods)}',
           style: const TextStyle(fontSize: 11)),
-      const SizedBox(height: 6),
-      Expanded(child: SingleChildScrollView(
+      const SizedBox(height: 12),
+      const Divider(color: Color(0xFF3A3A3A)),
+      const SizedBox(height: 8),
+      Expanded(
+        child: SingleChildScrollView(
           child: Text(s.description.isEmpty ? '[ НЕТ ОПИСАНИЯ ]' : s.description,
-              style: const TextStyle(fontSize: 12, height: 1.5)))),
+              style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFFCCCCCC))),
+        ),
+      ),
+      const SizedBox(height: 8),
       Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
         OutlinedButton(
           onPressed: () => setState(() => _draft = Skill.fromJson(s.toJson())),
@@ -444,7 +463,7 @@ class _SkillsTabState extends State<SkillsTab> {
   );
 }
 
-// ---------- редактор своего навыка с формулами ----------
+// ---------- редактор своего навыка ----------
 class PerkEditor extends StatefulWidget {
   final Skill skill;
   final VoidCallback onDone;
@@ -520,7 +539,7 @@ class _PerkEditorState extends State<PerkEditor> {
             DropdownButton<String>(
               value: _mods[i].key,
               items: GameData.specialKeys.map((k) => DropdownMenuItem(
-                  value: k, child: Text(k, style: const TextStyle(fontSize: 11)))).toList(),
+                  value: k, child: Text(specialRu[k] ?? k, style: const TextStyle(fontSize: 11)))).toList(),
               onChanged: (v) => setState(() => _mods[i] = MapEntry(v ?? 'S', _mods[i].value)),
             ),
             const SizedBox(width: 6),
@@ -562,43 +581,100 @@ class _PerkEditorState extends State<PerkEditor> {
   }
 }
 
-// ==================== ЧЕРТЫ ====================
-class TraitsTab extends StatelessWidget {
+// ==================== ЧЕРТЫ (ТЕПЕРЬ В ЕДИНОМ СТИЛЕ С НАВЫКАМИ) ====================
+class TraitsTab extends StatefulWidget {
   final GameData data;
   final VoidCallback onChanged;
   const TraitsTab({super.key, required this.data, required this.onChanged});
 
   @override
-  Widget build(BuildContext context) {
-    final d = data;
-    return ListView.builder(
-      padding: const EdgeInsets.all(8),
-      itemCount: traitDefs.length,
-      itemBuilder: (_, i) {
-        final t = traitDefs[i];
-        final sel = d.hasTrait(t.id);
-        final disabled = !sel && d.traits.length >= 2;
-        return InkWell(
-          onTap: () {
-            if (sel) { d.traits.remove(t.id); }
-            else if (!disabled) { d.traits.add(t.id); }
-            onChanged();
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Icon(sel ? Icons.check_box : Icons.check_box_outline_blank, size: 16),
-              const SizedBox(width: 8),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('${t.name}  (${d.traits.length}/2)',
-                    style: TextStyle(fontSize: 12, color: disabled && !sel ? const Color(0xFF444444) : null)),
-                Text(t.description, style: const TextStyle(fontSize: 9, color: Color(0xFF777777))),
-              ])),
-            ]),
-          ),
-        );
-      },
-    );
-  }
+  State<TraitsTab> createState() => _TraitsTabState();
 }
 
+class _TraitsTabState extends State<TraitsTab> {
+  int _sel = 0;
+  GameData get d => widget.data;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_sel >= traitDefs.length) _sel = traitDefs.length - 1;
+    if (_sel < 0) _sel = 0;
+    final selectedTrait = traitDefs[_sel];
+
+    return Row(children: [
+      // ЛЕВАЯ ЧАСТЬ: СПИСОК ЧЕРТ
+      Expanded(
+        flex: 2,
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 3, 8, 0),
+            child: Row(children: [
+              Text('ВЫБРАНО: ${d.traits.length}/2', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+            ]),
+          ),
+          const Divider(height: 3),
+          Expanded(
+            child: ListView.builder(
+              itemCount: traitDefs.length,
+              itemBuilder: (_, i) {
+                final t = traitDefs[i];
+                final isSelected = _sel == i;
+                final hasTrait = d.hasTrait(t.id);
+                final disabled = !hasTrait && d.traits.length >= 2;
+
+                return InkWell(
+                  onTap: () {
+                    setState(() { _sel = i; });
+                    if (hasTrait) { 
+                      d.traits.remove(t.id); 
+                    } else if (!disabled) { 
+                      d.traits.add(t.id); 
+                    }
+                    widget.onChanged();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    color: isSelected ? const Color(0xFF1E1E1E) : Colors.transparent,
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Icon(hasTrait ? Icons.check_box : Icons.check_box_outline_blank, 
+                           size: 16, 
+                           color: disabled && !hasTrait ? const Color(0xFF444444) : null),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(t.name, 
+                          style: TextStyle(
+                              fontSize: 11, 
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: disabled && !hasTrait ? const Color(0xFF444444) : null))),
+                    ]),
+                  ),
+                );
+              },
+            ),
+          ),
+        ]),
+      ),
+      const VerticalDivider(width: 1, color: Color(0xFF3A3A3A)),
+      // ПРАВАЯ ЧАСТЬ: ОПИСАНИЕ ВЫБРАННОЙ ЧЕРТЫ
+      Expanded(
+        flex: 3,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Icon(Icons.info_outline, size: 48, color: Color(0xFF555555)),
+            const SizedBox(height: 8),
+            Text(selectedTrait.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            const Divider(color: Color(0xFF3A3A3A)),
+            const SizedBox(height: 8),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Text(selectedTrait.description,
+                    style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFFCCCCCC))),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    ]);
+  }
+}
