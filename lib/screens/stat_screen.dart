@@ -1,4 +1,4 @@
-import 'dart:convert'
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models.dart';
 
@@ -375,4 +375,4 @@ class _TraitsTabState extends State<TraitsTab> {
       ]))),
     ]);
   }
-};
+}
