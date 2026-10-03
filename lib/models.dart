@@ -5,7 +5,7 @@ const Map<String, String> specialRu = {
 };
 
 String modsToString(Map<String, int> mods) => mods.entries
-    .map((e) => '${e.value > 0 ? '+' : ''}${e.value} ${e.key}').join('  ');
+    .map((e) => '${e.value > 0 ? '+' : ''}${e.value} ${specialRu[e.key] ?? e.key}').join('  ');
 
 String modsToStringF(Map<String, String> mods) =>
     mods.entries.map((e) => '${e.key}:${e.value}').join('  ');
@@ -41,14 +41,48 @@ int evalFormula(String src, Map<String, int> vars) {
 }
 
 class ItemCategory {
-  static const weapon = 'weapon', armor = 'armor', med = 'med', tool = 'tool', junk = 'junk';
+  static const weapon = 'weapon';
+  static const armor = 'armor';
+  static const med = 'med';
+  static const tool = 'tool';
+  static const junk = 'junk';
   static const all = [weapon, armor, med, tool, junk];
+  
   static const shortLabels = {
-    weapon: 'ОРУЖИЕ И БОЕП.', armor: 'БРОНЯ И ОДЕЖДА', med: 'МЕД. И ЕДА', tool: 'ИНСТРУМЕНТЫ', junk: 'ХЛАМ',
+    weapon: 'ОРУЖИЕ И БОЕП.',
+    armor: 'БРОНЯ И ОДЕЖДА',
+    med: 'МЕД. И ЕДА',
+    tool: 'ИНСТР. И МОДИФ.',
+    junk: 'ХЛАМ',
   };
+  
+  static const Map<String, List<String>> types = {
+    weapon: ['оруж', 'бп'],
+    armor: ['одежд', 'броня'],
+    med: ['мед', 'еда'],
+    tool: ['инстр', 'модиф'],
+    junk: [],
+  };
+  
+  static const Map<String, List<String>> subtypes = {
+    'оруж': ['стрел', 'холод', 'метат', 'тяжел'],
+    'бп': [],
+    'одежд': ['голов', 'торс', 'низ', 'обувь', 'руки'],
+    'броня': ['голов', 'торс', 'низ', 'обувь', 'руки', 'сумки'],
+    'мед': [],
+    'еда': [],
+    'инстр': [],
+    'модиф': [],
+  };
+  
+  static String getFullLabel(String category, String type, String subtype) {
+    final catLabel = shortLabels[category] ?? category;
+    if (type.isEmpty) return catLabel;
+    if (subtype.isEmpty) return '$catLabel > ${type.toUpperCase()}';
+    return '$catLabel > ${type.toUpperCase()} > ${subtype.toUpperCase()}';
+  }
 }
 
-// ==================== ЕДИНАЯ МОДЕЛЬ НАВЫКА ====================
 class Skill {
   String id, name, description, baseFormula;
   int points;
@@ -108,16 +142,66 @@ const traitDefs = [
 ];
 
 class Item {
-  String id, name, category, description;
-  double weight; int price, count; bool equipable, equipped;
+  String id, name, category, type, subtype, description;
+  String? imagePath;
+  double weight;
+  int price, count;
+  bool equipable, equipped;
   Map<String, int> specialMods;
-  Item({String? id, this.name = '', this.category = ItemCategory.junk, this.description = '', this.weight = 0, this.price = 0, this.count = 1, this.equipable = false, this.equipped = false, Map<String, int>? specialMods})
-      : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(), specialMods = specialMods ?? {};
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'category': category, 'description': description, 'weight': weight, 'price': price, 'count': count, 'equipable': equipable, 'equipped': equipped, 'mods': specialMods};
+  Map<String, int> effects;
+  
+  Item({
+    String? id,
+    this.name = '',
+    this.category = ItemCategory.junk,
+    this.type = '',
+    this.subtype = '',
+    this.description = '',
+    this.imagePath,
+    this.weight = 0,
+    this.price = 0,
+    this.count = 1,
+    this.equipable = false,
+    this.equipped = false,
+    Map<String, int>? specialMods,
+    Map<String, int>? effects,
+  }) : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+       specialMods = specialMods ?? {},
+       effects = effects ?? {};
+  
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'category': category,
+    'type': type,
+    'subtype': subtype,
+    'description': description,
+    'imagePath': imagePath,
+    'weight': weight,
+    'price': price,
+    'count': count,
+    'equipable': equipable,
+    'equipped': equipped,
+    'mods': specialMods,
+    'effects': effects,
+  };
+  
   factory Item.fromJson(Map<String, dynamic> j) => Item(
-      id: j['id'], name: j['name'], category: j['category'] ?? ItemCategory.junk, description: j['description'] ?? '',
-      weight: (j['weight'] ?? 0).toDouble(), price: j['price'] ?? 0, count: j['count'] ?? 1, equipable: j['equipable'] ?? false,
-      equipped: j['equipped'] ?? false, specialMods: Map<String, int>.from(j['mods'] ?? {}));
+    id: j['id'],
+    name: j['name'],
+    category: j['category'] ?? ItemCategory.junk,
+    type: j['type'] ?? '',
+    subtype: j['subtype'] ?? '',
+    description: j['description'] ?? '',
+    imagePath: j['imagePath'],
+    weight: (j['weight'] ?? 0).toDouble(),
+    price: j['price'] ?? 0,
+    count: j['count'] ?? 1,
+    equipable: j['equipable'] ?? false,
+    equipped: j['equipped'] ?? false,
+    specialMods: Map<String, int>.from(j['mods'] ?? {}),
+    effects: Map<String, int>.from(j['effects'] ?? {}),
+  );
 }
 
 class Quest {
@@ -151,7 +235,7 @@ class GameData {
 
   GameData({Character? character, List<Skill>? skills, List<Item>? items, List<Quest>? quests, Map<String, int>? skillSpent, List<String>? skillTags, List<String>? traits, this.characterConfirmed = false})
       : character = character ?? Character(),
-        skills = skills ?? getDefaultSkills(), // УНИФИКАЦИЯ: сразу загружаем стандартные навыки
+        skills = skills ?? getDefaultSkills(),
         items = items ?? [], quests = quests ?? [], skillSpent = skillSpent ?? {}, skillTags = skillTags ?? [], traits = traits ?? [];
 
   bool hasTrait(String t) => traits.contains(t);
@@ -187,6 +271,28 @@ class GameData {
 
   void clamp() { character.hp = character.hp.clamp(0, maxHp); character.ap = character.ap.clamp(0, maxAp); }
 
+  void applyItemEffects(Item item) {
+    item.effects.forEach((key, value) {
+      switch (key) {
+        case 'hp':
+          character.hp = (character.hp + value).clamp(0, maxHp);
+          break;
+        case 'ap':
+          character.ap = (character.ap + value).clamp(0, maxAp);
+          break;
+        case 'S':
+        case 'P':
+        case 'E':
+        case 'C':
+        case 'I':
+        case 'A':
+        case 'L':
+          character.special[key] = (character.special[key] ?? 5) + value;
+          break;
+      }
+    });
+  }
+
   int traitSkillMod(String id) {
     var m = 0;
     if (hasTrait('gifted')) m -= 10;
@@ -197,7 +303,6 @@ class GameData {
     return m;
   }
 
-  // УНИФИКАЦИЯ: расчёт для любого объекта Skill
   int skillValue(Skill skill) {
     int v = evalFormula(skill.baseFormula, effectiveSpecial);
     if (skillTags.contains(skill.id)) v += 20;
