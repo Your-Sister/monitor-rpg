@@ -27,144 +27,6 @@ class _InvScreenState extends State<InvScreen> {
     });
   }
 
-  Future<void> _showCategoryPicker() async {
-    String? selectedCategory;
-    String? selectedType;
-    String? selectedSubtype;
-
-    await showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          backgroundColor: const Color(0xFF0C0C0C),
-          title: const Text('ВЫБОР КАТЕГОРИИ', style: TextStyle(fontSize: 13)),
-          content: SizedBox(
-            width: 400,
-            height: 400,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('КАТЕГОРИЯ:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: ItemCategory.all.map((cat) {
-                      final isSelected = selectedCategory == cat;
-                      return InkWell(
-                        onTap: () {
-                          setState(() {
-                            selectedCategory = cat;
-                            selectedType = null;
-                            selectedSubtype = null;
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFF3A3A3A) : Colors.transparent,
-                            border: Border.all(color: isSelected ? Colors.white : const Color(0xFF555555)),
-                          ),
-                          child: Text(
-                            ItemCategory.shortLabels[cat] ?? cat,
-                            style: const TextStyle(fontSize: 10),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 12),
-                  if (selectedCategory != null && ItemCategory.types[selectedCategory]!.isNotEmpty) ...[
-                    const Text('ТИП:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: ItemCategory.types[selectedCategory]!.map((type) {
-                        final isSelected = selectedType == type;
-                        return InkWell(
-                          onTap: () {
-                            setState(() {
-                              selectedType = type;
-                              selectedSubtype = null;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFF3A3A3A) : Colors.transparent,
-                              border: Border.all(color: isSelected ? Colors.white : const Color(0xFF555555)),
-                            ),
-                            child: Text(
-                              type.toUpperCase(),
-                              style: const TextStyle(fontSize: 10),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  if (selectedType != null && ItemCategory.subtypes[selectedType]!.isNotEmpty) ...[
-                    const Text('ПОДТИП:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: ItemCategory.subtypes[selectedType]!.map((subtype) {
-                        final isSelected = selectedSubtype == subtype;
-                        return InkWell(
-                          onTap: () {
-                            setState(() {
-                              selectedSubtype = subtype;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFF3A3A3A) : Colors.transparent,
-                              border: Border.all(color: isSelected ? Colors.white : const Color(0xFF555555)),
-                            ),
-                            child: Text(
-                              subtype.toUpperCase(),
-                              style: const TextStyle(fontSize: 10),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('ОТМЕНА', style: TextStyle(fontSize: 11)),
-            ),
-            FilledButton(
-              onPressed: (selectedCategory != null)
-                  ? () {
-                      Navigator.pop(ctx);
-                      setState(() {
-                        _draft = Item(
-                          category: selectedCategory!,
-                          type: selectedType ?? '',
-                          subtype: selectedSubtype ?? '',
-                        );
-                      });
-                    }
-                  : null,
-              child: const Text('СОЗДАТЬ', style: TextStyle(fontSize: 11)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _commit() {
     final draft = _draft!;
     if (draft.name.trim().isEmpty) draft.name = '[ БЕЗ НАЗВАНИЯ ]';
@@ -200,9 +62,7 @@ class _InvScreenState extends State<InvScreen> {
       }
       widget.onChanged();
     } else if (it.equipable) {
-      setState(() {
-        it.equipped = !it.equipped;
-      });
+      setState(() { it.equipped = !it.equipped; });
       widget.onChanged();
     }
   }
@@ -211,9 +71,7 @@ class _InvScreenState extends State<InvScreen> {
     if (_draft == null) return;
     final image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      setState(() {
-        _draft!.imagePath = image.path;
-      });
+      setState(() { _draft!.imagePath = image.path; });
     }
   }
 
@@ -226,10 +84,7 @@ class _InvScreenState extends State<InvScreen> {
         child: Container(
           height: 36,
           alignment: Alignment.center,
-          child: Text(
-            text,
-            style: TextStyle(fontSize: 11, letterSpacing: 1, color: color),
-          ),
+          child: Text(text, style: TextStyle(fontSize: 11, letterSpacing: 1, color: color)),
         ),
       ),
     );
@@ -265,22 +120,11 @@ class _InvScreenState extends State<InvScreen> {
                             color: const Color(0xFF1A1A1A),
                             child: Row(
                               children: [
-                                Icon(
-                                  isExpanded ? Icons.expand_more : Icons.chevron_right,
-                                  size: 16,
-                                  color: const Color(0xFFB5B5B5),
-                                ),
+                                Icon(isExpanded ? Icons.expand_more : Icons.chevron_right, size: 16, color: const Color(0xFFB5B5B5)),
                                 const SizedBox(width: 6),
-                                Text(
-                                  ItemCategory.shortLabels[cat] ?? cat,
-                                  style: const TextStyle(
-                                      fontSize: 11, letterSpacing: 1, fontWeight: FontWeight.bold),
-                                ),
+                                Text(ItemCategory.shortLabels[cat] ?? cat, style: const TextStyle(fontSize: 11, letterSpacing: 1, fontWeight: FontWeight.bold)),
                                 const Spacer(),
-                                Text(
-                                  '${itemsInCat.length}',
-                                  style: const TextStyle(fontSize: 10, color: Color(0xFF777777)),
-                                ),
+                                Text('${itemsInCat.length}', style: const TextStyle(fontSize: 10, color: Color(0xFF777777))),
                               ],
                             ),
                           ),
@@ -298,36 +142,19 @@ class _InvScreenState extends State<InvScreen> {
                                     if (it.imagePath != null)
                                       ClipRRect(
                                         borderRadius: BorderRadius.circular(4),
-                                        child: Image.file(
-                                          File(it.imagePath!),
-                                          width: 24,
-                                          height: 24,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) =>
-                                              const Icon(Icons.image, size: 24, color: Color(0xFF555555)),
-                                        ),
+                                        child: Image.file(File(it.imagePath!), width: 24, height: 24, fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 24, color: Color(0xFF555555))),
                                       )
                                     else
                                       const SizedBox(width: 24),
                                     const SizedBox(width: 8),
                                     Expanded(
-                                      child: Text(
-                                        it.name.isEmpty ? '[ БЕЗ НАЗВАНИЯ ]' : it.name,
-                                        style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
+                                      child: Text(it.name.isEmpty ? '[ БЕЗ НАЗВАНИЯ ]' : it.name,
+                                          style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+                                          overflow: TextOverflow.ellipsis),
                                     ),
-                                    if (it.count > 1)
-                                      Text('x${it.count}',
-                                          style:
-                                              const TextStyle(fontSize: 10, color: Color(0xFF999999))),
-                                    if (it.equipped)
-                                      const Padding(
-                                        padding: EdgeInsets.only(left: 6),
-                                        child: Icon(Icons.check, size: 12, color: Color(0xFFB5B5B5)),
-                                      ),
+                                    if (it.count > 1) Text('x${it.count}', style: const TextStyle(fontSize: 10, color: Color(0xFF999999))),
+                                    if (it.equipped) const Padding(padding: EdgeInsets.only(left: 6), child: Icon(Icons.check, size: 12, color: Color(0xFFB5B5B5))),
                                   ],
                                 ),
                               ),
@@ -342,8 +169,7 @@ class _InvScreenState extends State<InvScreen> {
                 padding: const EdgeInsets.all(6),
                 child: Row(
                   children: [
-                    Expanded(
-                        child: _buildTileButton('ДОБАВИТЬ ПРЕДМЕТ', _showCategoryPicker)),
+                    Expanded(child: _buildTileButton('ДОБАВИТЬ ПРЕДМЕТ', () => setState(() => _draft = Item(category: ItemCategory.weapon)))),
                   ],
                 ),
               ),
@@ -361,8 +187,7 @@ class _InvScreenState extends State<InvScreen> {
                   onPickImage: _pickImage,
                 )
               : actualItem == null
-                  ? const Center(
-                      child: Icon(Icons.inventory_2_outlined, size: 96, color: Color(0xFF3A3A3A)))
+                  ? const Center(child: Icon(Icons.inventory_2_outlined, size: 96, color: Color(0xFF3A3A3A)))
                   : _itemView(actualItem),
         ),
       ],
@@ -374,77 +199,40 @@ class _InvScreenState extends State<InvScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (it.imagePath != null)
-              ClipRRect(
+            AspectRatio(
+              aspectRatio: 3 / 4,
+              child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.file(
-                  File(it.imagePath!),
-                  height: 120,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
-              )
-            else
-              Icon(
-                it.equipped
-                    ? Icons.check_box
-                    : it.equipable
-                        ? Icons.check_box_outline_blank
-                        : Icons.circle,
-                size: 56,
-                color: const Color(0xFF555555),
+                child: it.imagePath != null
+                    ? Image.file(File(it.imagePath!), fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1A1A1A), child: const Icon(Icons.image, size: 48, color: Color(0xFF555555))))
+                    : Container(color: const Color(0xFF1A1A1A), child: const Icon(Icons.inventory_2_outlined, size: 64, color: Color(0xFF555555))),
               ),
-            const SizedBox(height: 8),
+            ),
+            const SizedBox(height: 12),
             Text(it.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            Text(
-              ItemCategory.getFullLabel(it.category, it.type, it.subtype),
-              style: const TextStyle(fontSize: 10, color: Color(0xFF777777)),
-            ),
+            Text(ItemCategory.getFullLabel(it.category, it.type, it.subtype), style: const TextStyle(fontSize: 10, color: Color(0xFF777777))),
             const SizedBox(height: 4),
-            Text(
-              'КОЛ-ВО: ${it.count}  |  ВЕС: ${it.weight}  |  ЦЕНА: ${it.price}',
-              style: const TextStyle(fontSize: 11),
-            ),
-            if (it.specialMods.isNotEmpty)
-              Text('МОД.: ${modsToString(it.specialMods)}', style: const TextStyle(fontSize: 11)),
-            if (it.effects.isNotEmpty)
-              Text('ЭФФЕКТЫ: ${it.effects.entries.map((e) => '${specialRu[e.key] ?? e.key}: ${e.value > 0 ? "+" : ""}${e.value}').join(", ")}',
-                  style: const TextStyle(fontSize: 11)),
+            Text('КОЛ-ВО: ${it.count}  |  ВЕС: ${it.weight}  |  ЦЕНА: ${it.price}', style: const TextStyle(fontSize: 11)),
+            if (it.specialMods.isNotEmpty) Text('МОД.: ${modsToString(it.specialMods)}', style: const TextStyle(fontSize: 11)),
+            if (it.effects.isNotEmpty) Text('ЭФФЕКТЫ: ${it.effects.entries.map((e) => '${specialRu[e.key] ?? e.key}: ${e.value > 0 ? "+" : ""}${e.value}').join(", ")}', style: const TextStyle(fontSize: 11)),
             const SizedBox(height: 12),
             const Divider(color: Color(0xFF3A3A3A)),
             const SizedBox(height: 8),
             Expanded(
               child: SingleChildScrollView(
-                child: Text(
-                  it.description.isEmpty ? '[ НЕТ ОПИСАНИЯ ]' : it.description,
-                  style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFFCCCCCC)),
-                ),
+                child: Text(it.description.isEmpty ? '[ НЕТ ОПИСАНИЯ ]' : it.description, style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFFCCCCCC))),
               ),
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                if (it.type == 'мед' || it.type == 'еда')
-                  Expanded(
-                      child: _buildTileButton('ИСПОЛЬЗОВАТЬ', () => _useItem(it))),
-                if (it.equipable && it.type != 'мед' && it.type != 'еда')
-                  Expanded(
-                      child: _buildTileButton(
-                          it.equipped ? 'СНЯТЬ' : 'ЭКИПИРОВАТЬ',
-                          () {
-                            setState(() => it.equipped = !it.equipped);
-                            widget.onChanged();
-                          })),
-                if (it.equipable && it.type != 'мед' && it.type != 'еда')
-                  const SizedBox(width: 4),
-                Expanded(
-                    child: _buildTileButton('ИЗМЕНИТЬ',
-                        () => setState(() => _draft = Item.fromJson(it.toJson())))),
+                if (it.type == 'мед' || it.type == 'еда') Expanded(child: _buildTileButton('ИСПОЛЬЗОВАТЬ', () => _useItem(it))),
+                if (it.equipable && it.type != 'мед' && it.type != 'еда') Expanded(child: _buildTileButton(it.equipped ? 'СНЯТЬ' : 'ЭКИПИРОВАТЬ', () { setState(() => it.equipped = !it.equipped); widget.onChanged(); })),
+                if (it.equipable && it.type != 'мед' && it.type != 'еда') const SizedBox(width: 4),
+                Expanded(child: _buildTileButton('ИЗМЕНИТЬ', () => setState(() => _draft = Item.fromJson(it.toJson())))),
                 const SizedBox(width: 4),
-                Expanded(
-                    child: _buildTileButton('УДАЛИТЬ', () => _delete(it), color: Colors.redAccent)),
+                Expanded(child: _buildTileButton('УДАЛИТЬ', () => _delete(it), color: Colors.redAccent)),
               ],
             ),
           ],
@@ -456,12 +244,7 @@ class ItemEditor extends StatefulWidget {
   final Item item;
   final VoidCallback onDone, onCancel;
   final VoidCallback onPickImage;
-  const ItemEditor(
-      {super.key,
-      required this.item,
-      required this.onDone,
-      required this.onCancel,
-      required this.onPickImage});
+  const ItemEditor({super.key, required this.item, required this.onDone, required this.onCancel, required this.onPickImage});
   @override State<ItemEditor> createState() => _ItemEditorState();
 }
 
@@ -482,66 +265,29 @@ class _ItemEditorState extends State<ItemEditor> {
     _price = TextEditingController(text: widget.item.price.toString());
     _count = TextEditingController(text: widget.item.count.toString());
     _equipable = widget.item.equipable;
-    _mods = widget.item.specialMods.entries
-        .map((e) => MapEntry(e.key, e.value.toString()))
-        .toList();
+    _mods = widget.item.specialMods.entries.map((e) => MapEntry(e.key, e.value.toString())).toList();
     _modCtrls = _mods.map((e) => TextEditingController(text: e.value)).toList();
-    _effects = widget.item.effects.entries
-        .map((e) => MapEntry(e.key, e.value.toString()))
-        .toList();
+    _effects = widget.item.effects.entries.map((e) => MapEntry(e.key, e.value.toString())).toList();
     _effectCtrls = _effects.map((e) => TextEditingController(text: e.value)).toList();
   }
 
   @override
   void dispose() {
-    _name.dispose();
-    _desc.dispose();
-    _weight.dispose();
-    _price.dispose();
-    _count.dispose();
-    for (final c in _modCtrls) {
-      c.dispose();
-    }
-    for (final c in _effectCtrls) {
-      c.dispose();
-    }
+    _name.dispose(); _desc.dispose(); _weight.dispose(); _price.dispose(); _count.dispose();
+    for (final c in _modCtrls) c.dispose();
+    for (final c in _effectCtrls) c.dispose();
     super.dispose();
   }
 
   Item get it => widget.item;
-  InputDecoration _dec(String l) =>
-      InputDecoration(labelText: l, isDense: true, labelStyle: const TextStyle(fontSize: 10));
+  InputDecoration _dec(String l) => InputDecoration(labelText: l, isDense: true, labelStyle: const TextStyle(fontSize: 10));
 
-  void _addMod() {
-    setState(() {
-      _mods.add(const MapEntry('S', '1'));
-      _modCtrls.add(TextEditingController(text: '1'));
-    });
-  }
-
-  void _addEffect() {
-    setState(() {
-      _effects.add(const MapEntry('hp', '10'));
-      _effectCtrls.add(TextEditingController(text: '10'));
-    });
-  }
+  void _addMod() { setState(() { _mods.add(const MapEntry('S', '1')); _modCtrls.add(TextEditingController(text: '1')); }); }
+  void _addEffect() { setState(() { _effects.add(const MapEntry('hp', '10')); _effectCtrls.add(TextEditingController(text: '10')); }); }
 
   Widget _buildTileButton(String text, VoidCallback onPressed, {Color? color}) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        splashColor: const Color(0xFF3A3A3A),
-        child: Container(
-          height: 36,
-          alignment: Alignment.center,
-          child: Text(
-            text,
-            style: TextStyle(fontSize: 11, letterSpacing: 1, color: color),
-          ),
-        ),
-      ),
-    );
+    return Material(color: Colors.transparent, child: InkWell(onTap: onPressed, splashColor: const Color(0xFF3A3A3A),
+        child: Container(height: 36, alignment: Alignment.center, child: Text(text, style: TextStyle(fontSize: 11, letterSpacing: 1, color: color)))));
   }
 
   @override
@@ -550,176 +296,103 @@ class _ItemEditorState extends State<ItemEditor> {
       padding: const EdgeInsets.all(10),
       child: Column(
         children: [
-          const Icon(Icons.inventory_2_outlined, size: 36, color: Color(0xFF555555)),
-          TextField(
-              controller: _name,
-              style: const TextStyle(fontSize: 14),
-              decoration: _dec('НАЗВАНИЕ'),
-              onChanged: (v) => it.name = v),
-          const SizedBox(height: 4),
-          Text(
-            ItemCategory.getFullLabel(it.category, it.type, it.subtype),
-            style: const TextStyle(fontSize: 10, color: Color(0xFF777777)),
+          AspectRatio(
+            aspectRatio: 3 / 4,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: it.imagePath != null
+                  ? Image.file(File(it.imagePath!), fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1A1A1A), child: const Icon(Icons.image, size: 48, color: Color(0xFF555555))))
+                  : Container(color: const Color(0xFF1A1A1A), child: const Icon(Icons.add_a_photo, size: 48, color: Color(0xFF555555))),
+            ),
           ),
           const SizedBox(height: 8),
-          if (it.imagePath != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.file(
-                File(it.imagePath!),
-                height: 100,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-              ),
-            ),
-          const SizedBox(height: 4),
           _buildTileButton('ПРИКРЕПИТЬ КАРТИНКУ', widget.onPickImage),
+          const SizedBox(height: 12),
+          TextField(controller: _name, style: const TextStyle(fontSize: 14), decoration: _dec('НАЗВАНИЕ'), onChanged: (v) => it.name = v),
           const SizedBox(height: 8),
+          
+          // ВЫБОР КАТЕГОРИИ, ТИПА И ПОДТИПА
+          DropdownButtonFormField<String>(
+            value: it.category,
+            decoration: _dec('КАТЕГОРИЯ'),
+            items: ItemCategory.all.map((c) => DropdownMenuItem(value: c, child: Text(ItemCategory.shortLabels[c]!))).toList(),
+            onChanged: (v) {
+              setState(() {
+                it.category = v!;
+                it.type = '';
+                it.subtype = '';
+              });
+            },
+          ),
+          const SizedBox(height: 8),
+          if (ItemCategory.types[it.category]!.isNotEmpty)
+            DropdownButtonFormField<String>(
+              value: it.type.isEmpty ? null : it.type,
+              decoration: _dec('ТИП'),
+              items: ItemCategory.types[it.category]!.map((t) => DropdownMenuItem(value: t, child: Text(t.toUpperCase()))).toList(),
+              onChanged: (v) {
+                setState(() {
+                  it.type = v ?? '';
+                  it.subtype = '';
+                });
+              },
+            ),
+          if (ItemCategory.types[it.category]!.isNotEmpty) const SizedBox(height: 8),
+          if (it.type.isNotEmpty && ItemCategory.subtypes[it.type]!.isNotEmpty)
+            DropdownButtonFormField<String>(
+              value: it.subtype.isEmpty ? null : it.subtype,
+              decoration: _dec('ПОДТИП'),
+              items: ItemCategory.subtypes[it.type]!.map((s) => DropdownMenuItem(value: s, child: Text(s.toUpperCase()))).toList(),
+              onChanged: (v) { setState(() { it.subtype = v ?? ''; }); },
+            ),
+          const SizedBox(height: 12),
+
           Row(
             children: [
-              Expanded(
-                  child: TextField(
-                      controller: _weight,
-                      keyboardType: TextInputType.number,
-                      decoration: _dec('ВЕС'),
-                      onChanged: (v) => it.weight = double.tryParse(v) ?? 0)),
+              Expanded(child: TextField(controller: _weight, keyboardType: TextInputType.number, decoration: _dec('ВЕС'), onChanged: (v) => it.weight = double.tryParse(v) ?? 0)),
               const SizedBox(width: 8),
-              Expanded(
-                  child: TextField(
-                      controller: _price,
-                      keyboardType: TextInputType.number,
-                      decoration: _dec('ЦЕНА'),
-                      onChanged: (v) => it.price = int.tryParse(v) ?? 0)),
+              Expanded(child: TextField(controller: _price, keyboardType: TextInputType.number, decoration: _dec('ЦЕНА'), onChanged: (v) => it.price = int.tryParse(v) ?? 0)),
               const SizedBox(width: 8),
-              Expanded(
-                  child: TextField(
-                      controller: _count,
-                      keyboardType: TextInputType.number,
-                      decoration: _dec('КОЛ-ВО'),
-                      onChanged: (v) => it.count = int.tryParse(v) ?? 1)),
+              Expanded(child: TextField(controller: _count, keyboardType: TextInputType.number, decoration: _dec('КОЛ-ВО'), onChanged: (v) => it.count = int.tryParse(v) ?? 1)),
             ],
           ),
           const SizedBox(height: 4),
           Row(
             children: [
-              Checkbox(
-                  value: _equipable,
-                  onChanged: (v) => setState(() {
-                        _equipable = v ?? false;
-                        it.equipable = _equipable;
-                      })),
+              Checkbox(value: _equipable, onChanged: (v) => setState(() { _equipable = v ?? false; it.equipable = _equipable; })),
               const Text('МОЖНО ЭКИПИРОВАТЬ', style: TextStyle(fontSize: 10)),
             ],
           ),
-          Align(
-              alignment: Alignment.centerLeft,
-              child: InkWell(
-                  onTap: _addMod,
-                  child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Text('+ МОД. SPECIAL (формула)',
-                          style: TextStyle(fontSize: 10))))),
+          const SizedBox(height: 8),
+          Align(alignment: Alignment.centerLeft, child: InkWell(onTap: _addMod, child: const Padding(padding: EdgeInsets.all(4), child: Text('+ МОД. SPECIAL (формула)', style: TextStyle(fontSize: 10))))),
           for (var i = 0; i < _mods.length; i++)
             Row(
               children: [
-                DropdownButton<String>(
-                  value: _mods[i].key,
-                  items: GameData.specialKeys
-                      .map((k) => DropdownMenuItem(
-                          value: k,
-                          child: Text(specialRu[k] ?? k,
-                              style: const TextStyle(fontSize: 11))))
-                      .toList(),
-                  onChanged: (v) =>
-                      setState(() => _mods[i] = MapEntry(v ?? 'S', _mods[i].value)),
-                ),
+                DropdownButton<String>(value: _mods[i].key, items: GameData.specialKeys.map((k) => DropdownMenuItem(value: k, child: Text(specialRu[k] ?? k, style: const TextStyle(fontSize: 11)))).toList(), onChanged: (v) => setState(() => _mods[i] = MapEntry(v ?? 'S', _mods[i].value))),
                 const SizedBox(width: 6),
-                Expanded(
-                    child: TextField(
-                        controller: _modCtrls[i],
-                        style: const TextStyle(fontSize: 11),
-                        decoration: const InputDecoration(
-                            isDense: true,
-                            hintText: '1, 2*rank',
-                            hintStyle:
-                                TextStyle(fontSize: 9, color: Color(0xFF555555))),
-                        onChanged: (v) =>
-                            _mods[i] = MapEntry(_mods[i].key, v))),
-                InkWell(
-                    onTap: () => setState(() {
-                          _mods.removeAt(i);
-                          _modCtrls.removeAt(i).dispose();
-                        }),
-                    child: const Padding(
-                        padding: EdgeInsets.all(4),
-                        child: Icon(Icons.close, size: 14))),
+                Expanded(child: TextField(controller: _modCtrls[i], style: const TextStyle(fontSize: 11), decoration: const InputDecoration(isDense: true, hintText: '1, 2*rank', hintStyle: TextStyle(fontSize: 9, color: Color(0xFF555555))), onChanged: (v) => _mods[i] = MapEntry(_mods[i].key, v))),
+                InkWell(onTap: () => setState(() { _mods.removeAt(i); _modCtrls.removeAt(i).dispose(); }), child: const Padding(padding: EdgeInsets.all(4), child: Icon(Icons.close, size: 14))),
               ],
             ),
           const SizedBox(height: 8),
-          Align(
-              alignment: Alignment.centerLeft,
-              child: InkWell(
-                  onTap: _addEffect,
-                  child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Text('+ ЭФФЕКТ ПРИ ИСПОЛЬЗОВАНИИ',
-                          style: TextStyle(fontSize: 10))))),
+          Align(alignment: Alignment.centerLeft, child: InkWell(onTap: _addEffect, child: const Padding(padding: EdgeInsets.all(4), child: Text('+ ЭФФЕКТ ПРИ ИСПОЛЬЗОВАНИИ', style: TextStyle(fontSize: 10))))),
           for (var i = 0; i < _effects.length; i++)
             Row(
               children: [
-                DropdownButton<String>(
-                  value: _effects[i].key,
-                  items: const ['hp', 'ap', 'S', 'P', 'E', 'C', 'I', 'A', 'L']
-                      .map((k) => DropdownMenuItem(
-                          value: k,
-                          child: Text(specialRu[k] ?? k,
-                              style: const TextStyle(fontSize: 11))))
-                      .toList(),
-                  onChanged: (v) => setState(
-                      () => _effects[i] = MapEntry(v ?? 'hp', _effects[i].value)),
-                ),
+                DropdownButton<String>(value: _effects[i].key, items: const ['hp', 'ap', 'S', 'P', 'E', 'C', 'I', 'A', 'L'].map((k) => DropdownMenuItem(value: k, child: Text(specialRu[k] ?? k, style: const TextStyle(fontSize: 11)))).toList(), onChanged: (v) => setState(() => _effects[i] = MapEntry(v ?? 'hp', _effects[i].value))),
                 const SizedBox(width: 6),
-                Expanded(
-                    child: TextField(
-                        controller: _effectCtrls[i],
-                        keyboardType: TextInputType.number,
-                        style: const TextStyle(fontSize: 11),
-                        decoration: const InputDecoration(
-                            isDense: true,
-                            hintText: '10',
-                            hintStyle:
-                                TextStyle(fontSize: 9, color: Color(0xFF555555))),
-                        onChanged: (v) =>
-                            _effects[i] = MapEntry(_effects[i].key, v))),
-                InkWell(
-                    onTap: () => setState(() {
-                          _effects.removeAt(i);
-                          _effectCtrls.removeAt(i).dispose();
-                        }),
-                    child: const Padding(
-                        padding: EdgeInsets.all(4),
-                        child: Icon(Icons.close, size: 14))),
+                Expanded(child: TextField(controller: _effectCtrls[i], keyboardType: TextInputType.number, style: const TextStyle(fontSize: 11), decoration: const InputDecoration(isDense: true, hintText: '10', hintStyle: TextStyle(fontSize: 9, color: Color(0xFF555555))), onChanged: (v) => _effects[i] = MapEntry(_effects[i].key, v))),
+                InkWell(onTap: () => setState(() { _effects.removeAt(i); _effectCtrls.removeAt(i).dispose(); }), child: const Padding(padding: EdgeInsets.all(4), child: Icon(Icons.close, size: 14))),
               ],
             ),
           const SizedBox(height: 4),
-          TextField(
-              controller: _desc,
-              minLines: 4,
-              maxLines: null,
-              textAlignVertical: TextAlignVertical.top,
-              style: const TextStyle(fontSize: 12),
-              decoration: _dec('ОПИСАНИЕ'),
-              onChanged: (v) => it.description = v),
+          TextField(controller: _desc, minLines: 4, maxLines: null, textAlignVertical: TextAlignVertical.top, style: const TextStyle(fontSize: 12), decoration: _dec('ОПИСАНИЕ'), onChanged: (v) => it.description = v),
           const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(
-                  child: _buildTileButton('ГОТОВО', () {
-                it.specialMods = Map.fromEntries(
-                    _mods.map((e) => MapEntry(e.key, int.tryParse(e.value) ?? 0)));
-                it.effects = Map.fromEntries(
-                    _effects.map((e) => MapEntry(e.key, int.tryParse(e.value) ?? 0)));
+              Expanded(child: _buildTileButton('ГОТОВО', () {
+                it.specialMods = Map.fromEntries(_mods.map((e) => MapEntry(e.key, int.tryParse(e.value) ?? 0)));
+                it.effects = Map.fromEntries(_effects.map((e) => MapEntry(e.key, int.tryParse(e.value) ?? 0)));
                 widget.onDone();
               })),
               Expanded(child: _buildTileButton('ОТМЕНА', widget.onCancel)),
