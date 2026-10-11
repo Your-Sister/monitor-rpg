@@ -131,35 +131,33 @@ class _DataScreenState extends State<DataScreen> {
 
   Widget _questView(Quest q) => Padding(
         padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              q.status == 'ВЫПОЛНЕН' ? Icons.check_circle : (q.status == 'ПРОВАЛЕН' ? Icons.cancel : Icons.description_outlined),
-              size: 56,
-              color: q.status == 'ВЫПОЛНЕН' ? const Color(0xFF4CAF50) : (q.status == 'ПРОВАЛЕН' ? const Color(0xFFF44336) : const Color(0xFF555555)),
-            ),
-            const SizedBox(height: 8),
-            Text(q.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text('СТАТУС: ${q.status}', style: const TextStyle(fontSize: 11)),
-            const SizedBox(height: 12),
-            const Divider(color: Color(0xFF3A3A3A)),
-            const SizedBox(height: 8),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Text(q.description.isEmpty ? '[ НЕТ ОПИСАНИЯ ]' : q.description, style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFFCCCCCC))),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                q.status == 'ВЫПОЛНЕН' ? Icons.check_circle : (q.status == 'ПРОВАЛЕН' ? Icons.cancel : Icons.description_outlined),
+                size: 56,
+                color: q.status == 'ВЫПОЛНЕН' ? const Color(0xFF4CAF50) : (q.status == 'ПРОВАЛЕН' ? const Color(0xFFF44336) : const Color(0xFF555555)),
               ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(child: _buildTileButton('ИЗМЕНИТЬ', () => setState(() => _draft = Quest(id: q.id, title: q.title, description: q.description, status: q.status)))),
-                const SizedBox(width: 4),
-                Expanded(child: _buildTileButton('УДАЛИТЬ', () => _delete(q), color: Colors.redAccent)),
-              ],
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(q.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text('СТАТУС: ${q.status}', style: const TextStyle(fontSize: 11)),
+              const SizedBox(height: 12),
+              const Divider(color: Color(0xFF3A3A3A)),
+              const SizedBox(height: 8),
+              Text(q.description.isEmpty ? '[ НЕТ ОПИСАНИЯ ]' : q.description, style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFFCCCCCC))),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _buildTileButton('ИЗМЕНИТЬ', () => setState(() => _draft = Quest(id: q.id, title: q.title, description: q.description, status: q.status)))),
+                  const SizedBox(width: 4),
+                  Expanded(child: _buildTileButton('УДАЛИТЬ', () => _delete(q), color: Colors.redAccent)),
+                ],
+              ),
+            ],
+          ),
         ),
       );
 }

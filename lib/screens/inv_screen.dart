@@ -196,46 +196,44 @@ class _InvScreenState extends State<InvScreen> {
 
   Widget _itemView(Item it) => Padding(
         padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AspectRatio(
-              aspectRatio: 3 / 4,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: it.imagePath != null
-                    ? Image.file(File(it.imagePath!), fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1A1A1A), child: const Icon(Icons.image, size: 48, color: Color(0xFF555555))))
-                    : Container(color: const Color(0xFF1A1A1A), child: const Icon(Icons.inventory_2_outlined, size: 64, color: Color(0xFF555555))),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AspectRatio(
+                aspectRatio: 4 / 3,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: it.imagePath != null
+                      ? Image.file(File(it.imagePath!), fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1A1A1A), child: const Icon(Icons.image, size: 48, color: Color(0xFF555555))))
+                      : Container(color: const Color(0xFF1A1A1A), child: const Icon(Icons.inventory_2_outlined, size: 64, color: Color(0xFF555555))),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(it.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text(ItemCategory.getFullLabel(it.category, it.type, it.subtype), style: const TextStyle(fontSize: 10, color: Color(0xFF777777))),
-            const SizedBox(height: 4),
-            Text('КОЛ-ВО: ${it.count}  |  ВЕС: ${it.weight}  |  ЦЕНА: ${it.price}', style: const TextStyle(fontSize: 11)),
-            if (it.specialMods.isNotEmpty) Text('МОД.: ${modsToString(it.specialMods)}', style: const TextStyle(fontSize: 11)),
-            if (it.effects.isNotEmpty) Text('ЭФФЕКТЫ: ${it.effects.entries.map((e) => '${specialRu[e.key] ?? e.key}: ${e.value > 0 ? "+" : ""}${e.value}').join(", ")}', style: const TextStyle(fontSize: 11)),
-            const SizedBox(height: 12),
-            const Divider(color: Color(0xFF3A3A3A)),
-            const SizedBox(height: 8),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Text(it.description.isEmpty ? '[ НЕТ ОПИСАНИЯ ]' : it.description, style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFFCCCCCC))),
+              const SizedBox(height: 12),
+              Text(it.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text(ItemCategory.getFullLabel(it.category, it.type, it.subtype), style: const TextStyle(fontSize: 10, color: Color(0xFF777777))),
+              const SizedBox(height: 4),
+              Text('КОЛ-ВО: ${it.count}  |  ВЕС: ${it.weight}  |  ЦЕНА: ${it.price}', style: const TextStyle(fontSize: 11)),
+              if (it.specialMods.isNotEmpty) Text('МОД.: ${modsToString(it.specialMods)}', style: const TextStyle(fontSize: 11)),
+              if (it.effects.isNotEmpty) Text('ЭФФЕКТЫ: ${it.effects.entries.map((e) => '${specialRu[e.key] ?? e.key}: ${e.value > 0 ? "+" : ""}${e.value}').join(", ")}', style: const TextStyle(fontSize: 11)),
+              const SizedBox(height: 12),
+              const Divider(color: Color(0xFF3A3A3A)),
+              const SizedBox(height: 8),
+              Text(it.description.isEmpty ? '[ НЕТ ОПИСАНИЯ ]' : it.description, style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFFCCCCCC))),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  if (it.type == 'мед' || it.type == 'еда') Expanded(child: _buildTileButton('ИСПОЛЬЗОВАТЬ', () => _useItem(it))),
+                  if (it.equipable && it.type != 'мед' && it.type != 'еда') Expanded(child: _buildTileButton(it.equipped ? 'СНЯТЬ' : 'ЭКИПИРОВАТЬ', () { setState(() => it.equipped = !it.equipped); widget.onChanged(); })),
+                  if (it.equipable && it.type != 'мед' && it.type != 'еда') const SizedBox(width: 4),
+                  Expanded(child: _buildTileButton('ИЗМЕНИТЬ', () => setState(() => _draft = Item.fromJson(it.toJson())))),
+                  const SizedBox(width: 4),
+                  Expanded(child: _buildTileButton('УДАЛИТЬ', () => _delete(it), color: Colors.redAccent)),
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                if (it.type == 'мед' || it.type == 'еда') Expanded(child: _buildTileButton('ИСПОЛЬЗОВАТЬ', () => _useItem(it))),
-                if (it.equipable && it.type != 'мед' && it.type != 'еда') Expanded(child: _buildTileButton(it.equipped ? 'СНЯТЬ' : 'ЭКИПИРОВАТЬ', () { setState(() => it.equipped = !it.equipped); widget.onChanged(); })),
-                if (it.equipable && it.type != 'мед' && it.type != 'еда') const SizedBox(width: 4),
-                Expanded(child: _buildTileButton('ИЗМЕНИТЬ', () => setState(() => _draft = Item.fromJson(it.toJson())))),
-                const SizedBox(width: 4),
-                Expanded(child: _buildTileButton('УДАЛИТЬ', () => _delete(it), color: Colors.redAccent)),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       );
 }
@@ -297,11 +295,11 @@ class _ItemEditorState extends State<ItemEditor> {
       child: Column(
         children: [
           AspectRatio(
-            aspectRatio: 3 / 4,
+            aspectRatio: 4 / 3,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: it.imagePath != null
-                  ? Image.file(File(it.imagePath!), fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1A1A1A), child: const Icon(Icons.image, size: 48, color: Color(0xFF555555))))
+                  ? Image.file(File(it.imagePath!), fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1A1A1A), child: const Icon(Icons.add_a_photo, size: 48, color: Color(0xFF555555))))
                   : Container(color: const Color(0xFF1A1A1A), child: const Icon(Icons.add_a_photo, size: 48, color: Color(0xFF555555))),
             ),
           ),
@@ -310,8 +308,6 @@ class _ItemEditorState extends State<ItemEditor> {
           const SizedBox(height: 12),
           TextField(controller: _name, style: const TextStyle(fontSize: 14), decoration: _dec('НАЗВАНИЕ'), onChanged: (v) => it.name = v),
           const SizedBox(height: 8),
-          
-          // ВЫБОР КАТЕГОРИИ, ТИПА И ПОДТИПА
           DropdownButtonFormField<String>(
             value: it.category,
             decoration: _dec('КАТЕГОРИЯ'),
@@ -346,7 +342,6 @@ class _ItemEditorState extends State<ItemEditor> {
               onChanged: (v) { setState(() { it.subtype = v ?? ''; }); },
             ),
           const SizedBox(height: 12),
-
           Row(
             children: [
               Expanded(child: TextField(controller: _weight, keyboardType: TextInputType.number, decoration: _dec('ВЕС'), onChanged: (v) => it.weight = double.tryParse(v) ?? 0)),

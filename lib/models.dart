@@ -47,7 +47,7 @@ class ItemCategory {
   static const tool = 'tool';
   static const junk = 'junk';
   static const all = [weapon, armor, med, tool, junk];
-  
+
   static const shortLabels = {
     weapon: 'ОРУЖИЕ И БОЕП.',
     armor: 'БРОНЯ И ОДЕЖДА',
@@ -55,7 +55,7 @@ class ItemCategory {
     tool: 'ИНСТР. И МОДИФ.',
     junk: 'ХЛАМ',
   };
-  
+
   static const Map<String, List<String>> types = {
     weapon: ['оруж', 'бп'],
     armor: ['одежд', 'броня'],
@@ -63,7 +63,7 @@ class ItemCategory {
     tool: ['инстр', 'модиф'],
     junk: [],
   };
-  
+
   static const Map<String, List<String>> subtypes = {
     'оруж': ['стрел', 'холод', 'метат', 'тяжел'],
     'бп': [],
@@ -74,7 +74,7 @@ class ItemCategory {
     'инстр': [],
     'модиф': [],
   };
-  
+
   static String getFullLabel(String category, String type, String subtype) {
     final catLabel = shortLabels[category] ?? category;
     if (type.isEmpty) return catLabel;
@@ -149,7 +149,7 @@ class Item {
   bool equipable, equipped;
   Map<String, int> specialMods;
   Map<String, int> effects;
-  
+
   Item({
     String? id,
     this.name = '',
@@ -168,7 +168,7 @@ class Item {
   }) : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
        specialMods = specialMods ?? {},
        effects = effects ?? {};
-  
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,
@@ -185,7 +185,7 @@ class Item {
     'mods': specialMods,
     'effects': effects,
   };
-  
+
   factory Item.fromJson(Map<String, dynamic> j) => Item(
     id: j['id'],
     name: j['name'],
